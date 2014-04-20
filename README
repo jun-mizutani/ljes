@@ -1,0 +1,46 @@
+LjES : 3D framework for LuaJIT on Raspberry Pi
+
+2013/04/11  Jun Mizutani <mizutani.jun@nifty.ne.jp>
+                         http://www.mztn.org/rpi/rpi_ljes.html
+
+LjES is a small 3D framework for Raspberry Pi built on top of the
+OpenGL ES 2.0. LjES is written by 100% LuaJIT. The goal of this
+framework is to make 3D graphics programming easy. The Raspbian
+Linux disk image contains the LuaJIT-2.0. You don't need to install
+any packages on Raspberry Pi to use LjES.
+
+Usage :
+  tar zxf ljes-1.00.tar.gz
+  cd ljes-1.00
+  cd examples
+  luajit demo_spheres.lua
+
+  Hit [q] key to quit, [p] for screenshot.
+
+Example :
+
+  package.path = "../LjES/?.lua;" .. package.path
+  local demo = require("demo")
+
+  demo.screen(0, 0)
+  local aSpace = demo.getSpace()
+  local eye = aSpace:addNode(nil, "eye")
+  eye:setPosition(0, 0, 10)
+  demo.backgroundColor(0.2, 0.2, 0.4)
+
+  local shape = Shape:new()
+  shape:donut(8, 3, 16, 16)
+  shape:endShape()
+  shape:shaderParameter("color", {0.2, 0.5, 0.6, 1.0})
+
+  local node = aSpace:addNode(nil, "node1")
+  node:setPosition(0, 0, 0)
+  node:addShape(shape)
+
+  function draw()
+    node:rotateX(0.1)
+    aSpace:draw(eye)
+  end
+
+  demo.loop(draw, true)
+  demo.exit()
