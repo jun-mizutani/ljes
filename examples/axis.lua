@@ -1,14 +1,14 @@
 #!/usr/bin/luajit
 -- ---------------------------------------------
--- axis.lua    2013/04/10
---   Copyright (c) 2013 Jun Mizutani,
+-- axis.lua    2013/04/10, 2014/03/30
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 package.path = "../LjES/?.lua;" .. package.path
 
 require "Message"
-local demo = require("demo2")
+local demo = require("demo")  -- changed from "demo2"
 
 function createArrowShape(length, r, g, b)
   local obj = Shape:new()

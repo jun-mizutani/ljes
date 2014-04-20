@@ -1,10 +1,11 @@
 -- ---------------------------------------------
--- gles2.lua        2013/03/20
+-- gles2.lua        2013/10/27
 --   Copyright (c) 2013 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
+local ffi = require("ffi")
+local util = require("util")
 libgles2  = ffi.load("GLESv2")
 
 ffi.cdef[[
@@ -680,15 +681,15 @@ local gl = {
 function gl.checkError(message)
   local err = gl.getError()
   if (err == gl.INVALID_ENUM) then
-    print(string.format("%s : GL_INVALID_ENUM\n", message))
+    util.printf("%s : GL_INVALID_ENUM\n", message)
   elseif (err == gl.INVALID_VALUE) then
-    print(string.format("%s : GL_INVALID_VALUE\n", message))
+    util.printf("%s : GL_INVALID_VALUE\n", message)
   elseif (err == gl.INVALID_OPERATION) then
-    print(string.format("%s : GL_INVALID_OPERATION\n", message))
+    util.printf("%s : GL_INVALID_OPERATION\n", message)
   elseif (err == gl.OUT_OF_MEMORY) then
-    print(string.format("%s : GL_OUT_OF_MEMORY\n", message))
+    util.printf("%s : GL_OUT_OF_MEMORY\n", message)
   elseif (err == gl.NO_ERROR) then
-    print(string.format("%s : GL_NO_ERROR\n", message))
+    util.printf("%s : GL_NO_ERROR\n", message)
   end
 end
 

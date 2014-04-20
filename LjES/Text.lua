@@ -1,43 +1,24 @@
 -- ---------------------------------------------
--- Text.lua        2013/04/10
---   Copyright (c) 2013 Jun Mizutani,
+-- Text.lua        2014/02/11
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Text:new()
-  Text:init()
-  Text:makeShape ()
-  Text:initFont()
-  Text:createCharTexture()
-  Text:goTo(x, y)
-  Text:saveCursor()
-  Text:restoreCursor()
-  Text:scrollUp()
-  Text:incCursorPosition()
-  Text:write(str)
-  Text:writeAt(x, y, str)
-  Text:clearLine(lineNo)
-  Text:clearScreen()
-  Text:fontTest()
-  Text:setScale(scale)
-  Text:drawScreen()
-]]
-
-local ffi = require("ffi")
 local bit = require("bit")
-local gl  = require("gles2")
+local gl  = require "gles2"
 
 require "Font"
+require "Texture"
 
 local shl = bit.lshift
 local band = bit.band
 
-Text = Object:new(self)
+Text = Object:new()
 
 function Text.new(self)
   local obj = Object.new(self)
   obj.vbo = 0
+  obj.charOffset = 32 -- for default font
   return obj
 end
 
@@ -141,79 +122,6 @@ Text.letters = {
   {0,0,42,85,42,85,42,85,42,85,42,85,42,85,42,85}
 }
 
-function Text.init(self)
-  self.screen = ffi.new("uint8_t[?]", 80*25)
-  self.bytes = ffi.new("uint8_t[?]", 128*128*4)
-  self.shader = Font:new()
-  self.shader:init()
-  self:initFont()
-  self:createCharTexture()
-  self:makeShape()
-  self:clearScreen()
-end
-
-function Text.makeShape (self)
-  local vObj = ffi.new("float[?]", 20,
-    0.0,   0.0,   0.0,  0.0,    0.0,
-    0.025, 0.0,   0.0,  0.0625, 0.0,
-    0.0,   0.08,  0.0,  0.0,    0.125,
-    0.025, 0.08,  0.0,  0.0625, 0.125)
-
-  local vbo = ffi.new("uint32_t[1]")
-  gl.genBuffers(1, vbo)
-  self.vbo = vbo[0]
-  gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
-  gl.bufferData(gl.ARRAY_BUFFER, ffi.sizeof(vObj), vObj, gl.STATIC_DRAW)
-end
-
-function Text.initFont(self)
-  local j, k, i, b, c, n
-  local TEX_HEIGHT = 128
-  local TEX_WIDTH  = 128
-  local letters = Text.letters
-
-  for y=0, TEX_HEIGHT-1 do
-    j = math.floor(y / 16)
-    k = y % 16
-    -- k = 16 - y % 16
-    for x=0, TEX_WIDTH-1 do
-      i = math.floor(x / 8)
-      b = x % 8
-      if ((i+j*16) < 96) then
-        c = letters[i+j*16 + 1][k + 1]
-      else
-        c = 0
-      end
-      n = (y * 128 + x) * 4
-      if band(c, shl(0x01, b)) ~= 0 then
-        self.bytes[n    ]=255
-        self.bytes[n + 1]=255
-        self.bytes[n + 2]=255
-        self.bytes[n + 3]=255
-      else
-        self.bytes[n    ]=255
-        self.bytes[n + 1]=255
-        self.bytes[n + 2]=255
-        self.bytes[n + 3]=0
-      end
-    end
-  end
-end
-
-function Text.createCharTexture(self)
-  local tex = ffi.new("uint32_t[1]")
-  gl.genTextures(1, tex)
-  self.texname = tex[0]
-  gl.bindTexture(gl.TEXTURE_2D, self.texname)
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 128, 128, 0, gl.RGBA,
-      gl.UNSIGNED_BYTE, self.bytes)
-end
-
 function Text.goTo(self, x, y)
   if ((x >= 0) and (x < 80)) then
     self.cursorX = x
@@ -260,14 +168,24 @@ end
 
 function Text.write(self, str)
   for i=1, string.len(str) do
-    self.screen[self.cursorY * 80 + self.cursorX] = string.byte(str, i) - 32
+    self.screen[self.cursorY * 80 + self.cursorX] = string.byte(str, i) 
+                                                     - self.charOffset
     self:incCursorPosition()
   end
+end
+
+function Text.writef(self, fmt, ...)
+  self:write(string.format(fmt, ...))
 end
 
 function Text.writeAt(self, x, y, str)
    self:goTo(x, y)
    self:write(str)
+end
+
+function Text.writefAt(self, x, y, fmt, ...)
+  self:goTo(x, y)
+  self:writef(fmt, ...)
 end
 
 function Text.clearLine(self, lineNo)
@@ -298,6 +216,79 @@ function Text.setScale(self, scale)
   end
 end
 
+function Text.makeShape(self)
+  local vObj = ffi.new("float[?]", 20,
+    0.0,   0.0,   0.0,  0.0,    0.0,
+    0.025, 0.0,   0.0,  0.0625, 0.0,
+    0.0,   0.08,  0.0,  0.0,    0.125,
+    0.025, 0.08,  0.0,  0.0625, 0.125)
+
+  local vbo = ffi.new("uint32_t[1]")
+  gl.genBuffers(1, vbo)
+  self.vbo = vbo[0]
+  gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
+  gl.bufferData(gl.ARRAY_BUFFER, ffi.sizeof(vObj), vObj, gl.STATIC_DRAW)
+end
+
+function Text.init(self, texture_file)
+  local ok = false
+  self.screen = ffi.new("uint8_t[?]", 80*25)
+  self.bytes = ffi.new("uint8_t[?]", 128*128*4)
+  self.shader = Font:new()
+  self.shader:init()
+  self.tex = Texture:new()
+  if texture_file ~= nil then
+     ok = self.tex:readImageFromFile(texture_file)
+     self.charOffset = 0
+  end
+  if not ok then
+    self:initFont()
+    self.tex:setupTexture()
+    self.tex:setImage(self.bytes, 128, 128, 4)
+    self.charOffset = 32
+  end
+  self:makeShape()
+  self:clearScreen()
+end
+
+function Text.initFont(self)
+  local j, k, i, b, c, n
+  local TEX_HEIGHT = 128
+  local TEX_WIDTH  = 128
+  local letters = Text.letters
+
+  for y=0, TEX_HEIGHT-1 do
+    j = math.floor(y / 16)
+    k = y % 16
+    -- k = 16 - y % 16
+    for x=0, TEX_WIDTH-1 do
+      i = math.floor(x / 8)
+      b = x % 8
+      if ((i+j*16) < 96) then
+        c = letters[i+j*16 + 1][k + 1]
+      else
+        c = 0
+      end
+      n = (y * 128 + x) * 4
+      if band(c, shl(0x01, b)) ~= 0 then
+        self.bytes[n    ]=255
+        self.bytes[n + 1]=255
+        self.bytes[n + 2]=255
+        self.bytes[n + 3]=255
+      else
+        self.bytes[n    ]=255
+        self.bytes[n + 1]=255
+        self.bytes[n + 2]=255
+        self.bytes[n + 3]=0
+      end
+    end
+  end
+end
+
+function Text.getDefaultFontImage(self)
+  return self.bytes
+end
+
 function Text.drawScreen(self)
   local i, j, c
   local shd = self.shader
@@ -311,8 +302,7 @@ function Text.drawScreen(self)
         ffi.cast("const void *", 0))
   gl.vertexAttribPointer(shd.aTexCoord,2,gl.FLOAT,gl.FALSE,5*4,
         ffi.cast("const void *", 3*4))
-  gl.activeTexture(gl.TEXTURE0)
-  gl.bindTexture(gl.TEXTURE_2D, self.texname)
+  self.tex:active()
   local scale = shd:getScale()
   if scale < 1.0 then scale = 1.0 end
   local maxRow = math.floor(25 / scale) - 1

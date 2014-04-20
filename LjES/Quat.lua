@@ -1,26 +1,12 @@
 -- ---------------------------------------------
--- Quat.lua        2013/03/20
---   Copyright (c) 2013 Jun Mizutani,
+-- Quat.lua        2014/03/05
+--   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Quat:new()
-  Quat:mulQuat(qb)
-  Quat:lmulQuat(qb)
-  Quat:condugate()
-  Quat:normalize()
-  Quat:setRotateX(degree)
-  Quat:setRotateY(degree)
-  Quat:setRotateZ(degree)
-  Quat:eulerToQuat(head, pitch, bank)
-  Quat:checkShortestPath(qr)
-  Quat:slerp(a, b, t)
-  Quat:matrixToQuat(m)
-  Quat:print()
-]]
+ffi  = require "ffi"
+util = require "util"
 
-ffi = require "ffi"
 require "Object"
 
 local function RAD(degree)
@@ -136,26 +122,25 @@ function Quat.eulerToQuat(self, head, pitch, bank)
   self.q[3] = sinBcosP * cosH + cosBsinP * sinH
 end
 
-function Quat.checkShortestPath(self, qr)
-  local qs = ffi.new("double[4]", 1)
-  local qt = ffi.new("double[4]", 1)
+function Quat.dotProduct(self, qr)
+  local dp = 0
+  for i=0, 3 do
+    dp = dp + self.q[i] * qr.q[i]
+  end
+  return dp
+end
 
-  qs[0] = self.q[0] - qr.q[0]
-  qs[1] = self.q[1] - qr.q[1]
-  qs[2] = self.q[2] - qr.q[2]
-  qs[3] = self.q[3] - qr.q[3]
-  qt[0] = self.q[0] + qr.q[0]
-  qt[1] = self.q[1] + qr.q[1]
-  qt[2] = self.q[2] + qr.q[2]
-  qt[3] = self.q[3] + qr.q[3]
-  local s = qs[0]*qs[0] + qs[1]*qs[1] + qs[2]*qs[2] + qs[3]*qs[3]
-  local a = qt[0]*qt[0] + qt[1]*qt[1] + qt[2]*qt[2] + qt[3]*qt[3]
-  return s < t
+function Quat.negate(self)
+  local q = self.q
+  q[0] = -q[0]
+  q[1] = -q[1]
+  q[2] = -q[2]
+  q[3] = -q[3]
 end
 
 --  Spherical Linear Iterporation
 --  a,b : quaternion, t : 0.0 - 1.0
---  aQuat.slerp(a, b, t)
+--  aQuat:slerp(a, b, t)
 function Quat.slerp(self, a, b, t)
   local cosp = a.q[0]*b.q[0] + a.q[1]*b.q[1] + a.q[2]*b.q[2] + a.q[3]*b.q[3]
   local p = math.acos(cosp)
@@ -164,7 +149,7 @@ function Quat.slerp(self, a, b, t)
   local s = sinp
   if (sinp < 0.0) then s = -sinp end
 
-  if (s > 0.002) then --  1/8 degree
+  if (s > 0.0002) then  -- 0.01146 degree
     local scale0 = math.sin((1.0 - t) * p) / sinp
     local scale1 = math.sin(t * p) / sinp
     for i=0, 3 do
@@ -179,7 +164,7 @@ end
 
 function Quat.matrixToQuat(self, m)
   local S
-  if (m.mat[0] + m.mat[5] + m.mat[10] >= -1.0) then
+  if (m.mat[0] + m.mat[5] + m.mat[10] > -1.0) then
     self.q[0] = math.sqrt(m.mat[0] + m.mat[5] + m.mat[10] + 1)/2
     S = 4 * self.q[0]
     if (S ~= 0.0) then
@@ -225,7 +210,33 @@ end
 
 function Quat.print(self)
   local q = self.q
-  print( string.format("% 16.11e % 16.11e % 16.11e % 16.11e",
-               q[0], q[1], q[2], q[3]))
+  util.printf("% 16.11e % 16.11e % 16.11e % 16.11e\n", q[0], q[1], q[2], q[3])
 end
 
+function Quat.clone(self)
+   local quat = Quat:new()
+  for i=0,3 do quat.q[i] = self.q[i] end
+  return quat
+end
+
+function Quat.copyFrom(self, quat)
+  for i=0,3 do self.q[i] = quat.q[i] end
+end
+
+function Quat.check(self)
+  local q = self.q
+  local nan = false
+  for i=0,3 do
+    if (q[i]~=q[i]) then nan = true break end
+  end
+  if nan then
+    self:print()
+    assert(false, "NaN")
+  end
+end
+
+function Quat.quatToEuler(self)
+  local mat = Matrix:new()
+  mat:setByQuat(self)
+  return mat:matToEuler()  -- return head, pitch, bank
+end

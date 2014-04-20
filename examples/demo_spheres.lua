@@ -1,7 +1,7 @@
 #!/usr/bin/luajit
 -- ---------------------------------------------
--- demo_spheres.lua 2013/04/11
---   Copyright (c) 2013 Jun Mizutani,
+-- demo_spheres.lua 2013/04/11,2014/03/30
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
@@ -15,7 +15,7 @@ require("Matrix")
 require("Texture")
 require("Space")
 require("Shape")
-require("TexText")
+require("Text")    -- changed from TexText
 
 function checkKey(eye, base, text)
   local key = termios.realtimeKey()
@@ -160,7 +160,7 @@ end
   projMat:makeProjectionMatrix(1, 1000, 53, aspect)
   phong:setProjectionMatrix(projMat)
 
-  local aText = TexText:new()
+  local aText = Text:new()
   aText:init("font512.png")
   local aSpace = Space:new()
   g_tex = Texture:new()

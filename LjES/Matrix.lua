@@ -1,34 +1,11 @@
 -- ---------------------------------------------
--- Matrix.lua       2013/03/20
---   Copyright (c) 2013 Jun Mizutani,
+-- Matrix.lua       2014/03/02
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Matrix:new()
-  Matrix:makeUnit()
-  Matrix:set(row, column, val)
-  Matrix:get(row, column)
-  Matrix:copy()
-  Matrix:convFloat()
-  Matrix:setByQuat(quat)
-  Matrix:setByEuler(head, pitch, bank)
-  Matrix:matToEuler()
-  Matrix:position(position)
-  Matrix:getPosition()
-  Matrix:mul(mb)
-  Matrix:lmul(mb)
-  Matrix:makeProjectionMatrix(near, far, hfov, ratio)
-  Matrix:makeProjectionMatrixWH(near, far, width, height)
-  Matrix:makeProjectionMatrixOrtho(near, far, width, height)
-  Matrix:makeView(w)
-  Matrix:tmul3x3Vector(v)
-  Matrix:mul3x3Vector(v)
-  Matrix:mulVector(v)
-  Matrix:print()
-]]
-
-ffi = require "ffi"
+local ffi  = require ("ffi")
+local util = require ("util")
 require "Object"
 
 local function RAD(degree)
@@ -54,18 +31,50 @@ function Matrix.makeUnit(self)
   self.mat[10]= 1.0; self.mat[15] = 1.0
 end
 
+function Matrix.makeZero(self)
+  for i=0, 15 do self.mat[i] = 0.0 end
+end
+
 function Matrix.set(self, row, column, val)
   self.mat[column * 4 + row] = val
+end
+
+function Matrix.check(self)
+  local m = self.mat
+  local nan = false
+  for i=0,15 do
+    if (m[i]~=m[i]) then nan = true break end
+  end
+  if nan then
+    self:print()
+    assert(false, "NaN")
+  end
+end
+
+function Matrix.setBulk(self, numtable)
+  for i=0,15 do
+    self.mat[i] = numtable[i + 1]
+  end
+end
+
+function Matrix.setBulkWithOffset(self, numtable, offset)
+  for i=0,15 do
+    self.mat[i] = numtable[i + offset + 1]
+  end
 end
 
 function Matrix.get(self, row, column)
   return self.mat[column * 4 + row]
 end
 
-function Matrix.copy(self)
-  local obj = Matrix:new()
-  for i=0,15 do obj.mat[i] = self.mat[i] end
-  return obj
+function Matrix.clone(self)
+  local mat = Matrix:new()
+  for i=0,15 do mat.mat[i] = self.mat[i] end
+  return mat
+end
+
+function Matrix.copyFrom(self, mat)
+  for i=0,15 do self.mat[i] = mat.mat[i] end
 end
 
 function Matrix.convFloat(self)
@@ -106,29 +115,64 @@ function Matrix.setByQuat(self, quat)
   a[15] = 1.0
 end
 
+function Matrix.setByEulerXYZ(self, rx, ry, rz)
+  local a = self.mat
+  local cosZ = math.cos(RAD(rz ))
+  local cosX = math.cos(RAD(rx))
+  local cosY = math.cos(RAD(ry))
+  local sinZ = math.sin(RAD(rz))
+  local sinX = math.sin(RAD(rx))
+  local sinY = math.sin(RAD(ry))
+
+  local cosXcosZ = cosZ * cosX
+  local sinXsinZ = sinZ * sinX
+  local sinXcosZ = cosZ * sinX
+  local cosXsinZ = sinZ * cosX
+
+  a[ 0] = cosY * cosZ
+  a[ 1] = -cosY * sinZ
+  a[ 2] = sinY
+  a[ 4] = cosXsinZ + sinXcosZ * sinY
+  a[ 5] = cosXcosZ - sinXsinZ * sinY
+  a[ 6] = -sinX * cosY
+  a[ 8] = sinXsinZ - cosXcosZ * sinY
+  a[ 9] = cosXsinZ * sinY + sinXcosZ
+  a[10] = cosX * cosY
+  a[3] = 0.0; a[7] = 0.0; a[11] = 0.0;
+  a[12] = 0.0; a[13] = 0.0; a[14] = 0.0; -- position
+  a[15] = 1.0
+end
+
+function Matrix.matToEulerXYZ(self)
+  local rx = DEG(-math.atan(self.mat[6] / self.mat[10]))
+  local ry = DEG( math.asin(self.mat[2]))
+  local rz = DEG(-math.atan(self.mat[1] / self.mat[0]))
+  return rx, ry, rz
+end
+
 function Matrix.setByEuler(self, head, pitch, bank)
   local a = self.mat
-  local cosB = math.cos(RAD(bank ))
-  local cosP = math.cos(RAD(pitch))
-  local cosH = math.cos(RAD(head ))
-  local sinB = math.sin(RAD(bank ))
-  local sinP = math.sin(RAD(pitch))
-  local sinH = math.sin(RAD(head ))
+  local cosZ = math.cos(RAD(bank ))
+  local cosX = math.cos(RAD(pitch))
+  local cosY = math.cos(RAD(head ))
+  local sinZ = math.sin(RAD(bank ))
+  local sinX = math.sin(RAD(pitch))
+  local sinY = math.sin(RAD(head ))
 
-  local cosPcosB = cosB * cosP
-  local sinPsinB = sinB * sinP
-  local sinPcosB = cosB * sinP
-  local cosPsinB = sinB * cosP
+  local cosYcosZ = cosZ * cosY
+  local sinYsinZ = sinZ * sinY
+  local sinYcosZ = cosZ * sinY
+  local cosYsinZ = sinZ * cosY
 
-  a[0] = cosH*cosB - sinH*sinPsinB
-  a[1] = cosH*sinB + sinPcosB*sinH
-  a[2] = - cosP * sinH
-  a[4] = - cosPsinB
-  a[5] = cosPcosB
-  a[6] = sinP
-  a[8] = cosH * sinPsinB + cosB * sinH
-  a[9] = sinH * sinB - cosH * sinPcosB
-  a[10]= cosP * cosH
+  a[ 0] = cosYcosZ - sinX * sinYsinZ
+  a[ 1] = cosYsinZ + sinX * sinYcosZ
+  a[ 2] = -cosX * sinY
+  a[ 4] = -cosX * sinZ
+  a[ 5] = cosX * cosZ
+  a[ 6] = sinX
+  a[ 8] = sinX * cosYsinZ + sinYcosZ
+  a[ 9] = sinYsinZ - sinX * cosYcosZ
+  a[10] = cosX * cosY
   a[3] = 0.0; a[7] = 0.0; a[11] = 0.0;
   a[12] = 0.0; a[13] = 0.0; a[14] = 0.0; -- position
   a[15] = 1.0
@@ -152,6 +196,14 @@ function Matrix.getPosition(self)
   return {self.mat[12], self.mat[13], self.mat[14]}
 end
 
+--  ma = ma + mb
+function Matrix.add(self, mb)
+  for i = 0, 15 do
+    self.mat[i] = self.mat[i] + mb.mat[i]
+  end
+  return self
+end
+
 --  ma = ma * mb
 --                             b0    b4    b8     b12
 --                             b1    b5    b9     b13
@@ -162,7 +214,7 @@ end
 --  a1    a5    a9     a13     m1    m5    m9     m13
 --  a2    a6    a10    a14     m2    m6    m10    m14
 --  a3(0) a7(0) a11(0) a15(1)  m3    m7    m11    m15
-function Matrix.mul(self, mb)
+function Matrix.mul_(self, mb)
   local a = self.mat
   local a0 =a[ 0]; local a1 =a[ 1]; local a2 =a[ 2]; local a3 =a[ 3]
   local a4 =a[ 4]; local a5 =a[ 5]; local a6 =a[ 6]; local a7 =a[ 7]
@@ -196,6 +248,50 @@ function Matrix.mul(self, mb)
   return self
 end
 
+--  ma = ma * mb
+--                             b0    b4    b8     b12
+--                             b1    b5    b9     b13
+--                             b2    b6    b10    b14
+--                             b3(0) b7(0) b11(0) b15(1)
+-- --------------------------+------------------------------
+--  a0    a4    a8     a12     m0    m4    m8     m12
+--  a1    a5    a9     a13     m1    m5    m9     m13
+--  a2    a6    a10    a14     m2    m6    m10    m14
+--  a3(0) a7(0) a11(0) a15(1)  m3    m7    m11    m15
+function Matrix.mul(self, mb)
+  local a = self.mat
+  local a0 =a[ 0]; local a1 =a[ 1]; local a2 =a[ 2];
+  local a4 =a[ 4]; local a5 =a[ 5]; local a6 =a[ 6];
+  local a8 =a[ 8]; local a9 =a[ 9]; local a10=a[10];
+  local a12=a[12]; local a13=a[13]; local a14=a[14];
+  local b0 = mb.mat[ 0]; local b1 = mb.mat[ 1]
+  local b2 = mb.mat[ 2];
+  local b4 = mb.mat[ 4]; local b5 = mb.mat[ 5]
+  local b6 = mb.mat[ 6];
+  local b8 = mb.mat[ 8]; local b9 = mb.mat[ 9]
+  local b10= mb.mat[10];
+  local b12= mb.mat[12]; local b13= mb.mat[13]
+  local b14= mb.mat[14];
+
+  a[ 0] = a0 * b0 + a4 * b1 +  a8 * b2
+  a[ 1] = a1 * b0 + a5 * b1 +  a9 * b2
+  a[ 2] = a2 * b0 + a6 * b1 + a10 * b2
+  a[ 3] = 0.0
+  a[ 4] = a0 * b4 + a4 * b5 +  a8 * b6
+  a[ 5] = a1 * b4 + a5 * b5 +  a9 * b6
+  a[ 6] = a2 * b4 + a6 * b5 + a10 * b6
+  a[ 7] = 0.0
+  a[ 8] = a0 * b8 + a4 * b9 +  a8 * b10
+  a[ 9] = a1 * b8 + a5 * b9 +  a9 * b10
+  a[10] = a2 * b8 + a6 * b9 + a10 * b10
+  a[11] = 0.0
+  a[12] = a0 * b12+ a4 * b13+  a8 * b14+ a12
+  a[13] = a1 * b12+ a5 * b13+  a9 * b14+ a13
+  a[14] = a2 * b12+ a6 * b13+ a10 * b14+ a14
+  a[15] = 1.0
+  return self
+end
+
 --  ma = mb * ma
 function Matrix.lmul(self, mb)
   local a = self.mat
@@ -224,7 +320,7 @@ function Matrix.lmul(self, mb)
 end
 
 --  set Projection Matrix
---  fov = Horizontal field of view angle (degree)
+--  fov = Vertical field of view angle (degree)
 --  r = Width / Height
 --  w = 2n/Width, h = 2n/Height
 --
@@ -232,9 +328,9 @@ end
 --     0   2n/h     0         0
 --     0     0  -(f+n)/(f-n) -2fn/(f-n)
 --     0     0     -1         0
-function Matrix.makeProjectionMatrix(self, near, far, hfov, ratio)
-  local w = 1.0 / math.tan(hfov * 0.5 * math.pi / 180)
-  local h = w * ratio
+function Matrix.makeProjectionMatrix(self, near, far, vfov, ratio)
+  local h = 1.0 / math.tan(vfov * 0.5 * math.pi / 180)
+  local w = h / ratio
   local q = 1.0 / (far - near)
 
   self:makeUnit()
@@ -267,25 +363,44 @@ function Matrix.makeProjectionMatrixOrtho(self, near, far, width, height)
   self.mat[14]= (far + near) * q
 end
 
---  w : model matrix (local to world)
-function Matrix.makeView(self, w)
+function Matrix.inverse(self)
   local m = self.mat
-  local w12 = w.mat[12]
-  local w13 = w.mat[13]
-  local w14 = w.mat[14]
+  local work = Matrix:new()
+  work:copyFrom(self)
+  local w = work.mat
+  local w12 = m[12]
+  local w13 = m[13]
+  local w14 = m[14]
   --  transposed matrix
-  m[0]=w.mat[0]; m[4]=w.mat[1]; m[8]=w.mat[2]
-  m[1]=w.mat[4]; m[5]=w.mat[5]; m[9]=w.mat[6]
-  m[2]=w.mat[8]; m[6]=w.mat[9]; m[10]=w.mat[10]
+  m[0]=w[0]; m[4]=w[1]; m[8]=w[2]
+  m[1]=w[4]; m[5]=w[5]; m[9]=w[6]
+  m[2]=w[8]; m[6]=w[9]; m[10]=w[10]
   --  copy
-  m[7] = w.mat[7]
-  m[3] = w.mat[3]
-  m[11] = w.mat[11]
+  m[7] = w[7]
+  m[3] = w[3]
+  m[11] = w[11]
   --  translation
   m[12] = -(m[0]*w12 + m[4]*w13 + m[8]*w14)
   m[13] = -(m[1]*w12 + m[5]*w13 + m[9]*w14)
   m[14] = -(m[2]*w12 + m[6]*w13 + m[10]*w14)
-  m[15] =  w.mat[15]
+  m[15] =  w[15]
+end
+
+function Matrix.transpose(self)
+  local m = self.mat
+  local work = Matrix:new()
+  work:copyFrom(self)
+  local w = work.mat
+  m[0]=w[0];  m[4]=w[1];  m[8]=w[2];   m[12]=w[3]
+  m[1]=w[4];  m[5]=w[5];  m[9]=w[6];   m[13]=w[7]
+  m[2]=w[8];  m[6]=w[9];  m[10]=w[10]; m[14]=w[11]
+  m[3]=w[12]; m[7]=w[13]; m[11]=w[14]; m[15]=w[15]
+end
+
+--  w : model matrix (local to world)
+function Matrix.makeView(self, w)
+  self:copyFrom(w)
+  self:inverse()
 end
 
 -- v : {x, y, z}
@@ -316,12 +431,15 @@ function Matrix.mulVector(self, v)
   return {x/w, y/w, z/w}
 end
 
-function Matrix.print(self)
+function Matrix.print(self, f)
+  local fmt
   local m = self.mat
-  local fmt = "% 16.11e % 16.11e % 16.11e % 16.11e"
-  print( string.format(fmt, m[0], m[4], m[8],  m[12]))
-  print( string.format(fmt, m[1], m[5], m[9],  m[13]))
-  print( string.format(fmt, m[2], m[6], m[10], m[14]))
-  print( string.format(fmt, m[3], m[7], m[11], m[15]))
+  local fmte = "% 16.11e % 16.11e % 16.11e % 16.11e\n"
+  local fmtf = "% 16.14f % 16.14f % 16.14f % 16.14f\n"
+  if f then fmt = fmte else fmt = fmtf end
+  util.printf(fmt, m[0], m[4], m[8],  m[12])
+  util.printf(fmt, m[1], m[5], m[9],  m[13])
+  util.printf(fmt, m[2], m[6], m[10], m[14])
+  util.printf(fmt, m[3], m[7], m[11], m[15])
 end
 

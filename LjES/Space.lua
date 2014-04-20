@@ -1,24 +1,8 @@
 -- ---------------------------------------------
---  Space.lua      2013/04/10
---   Copyright (c) 2013 Jun Mizutani,
+--  Space.lua      2014/02/16
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
-
---[[
-  Space:new()
-  Space:addNode(parent_node, name)
-  Space:delNode(name)
-  Space:findNode(name)
-  Space:listNode()
-  Space:now()
-  Space:timerStart()
-  Space:uptime()
-  Space:deltaTime()
-  Space:count()
-  Space:setLight(node)
-  Space:setEye(node)
-  Space:draw(eye_node)
-]]
 
 local util = require "util"
 require "Object"
@@ -31,6 +15,7 @@ function Space.new(self)
   local obj = Object.new(self)
   obj.nodes = {}
   obj.roots = {}
+  obj.skeletons = {}
   obj.light = nil
   local sec, usec = util.gettimeofday()
   obj.startTime = sec + usec/1000000
@@ -44,7 +29,7 @@ function Space.addNode(self, parent_node, name)
   local node = Node:new(parent_node, name)
   table.insert(self.nodes, node)
   if parent_node ~= nil then
-    table.insert(parent_node.children, node)
+    parent_node:addChild(node)
   end
   return node
 end
@@ -60,13 +45,31 @@ function Space.delNode(self, name)
   end
 end
 
+function Space.scanSkeletons(self)
+  local shapes
+  self.skeletons = {}
+  for i=1, #self.nodes do
+    shapes = self.nodes[i].shapes
+    if #shapes > 0 then 
+      for j=1, #shapes do
+        local skeleton = shapes[j].skeleton
+        if skeleton ~= nil then
+          if skeleton:isAttachable() or skeleton:isShown() then
+            table.insert(self.skeletons, skeleton)
+          end
+        end
+      end
+    end
+  end
+end
+
 function Space.findNode(self, name)
   for i=1, #self.nodes do
     if (self.nodes[i].name == name) then
       return self.nodes[i]
     end
   end
-  print(name .. " not found!\n")
+  util.printf("%s not found!\n", name)
   return nil
 end
 
@@ -75,14 +78,14 @@ function Space.listNode(self)
     if #children == 0 then return end
     for j=1, #children do
       local fmt = '%' .. tostring(level*4) .. 's%s'
-      print(string.format(fmt, ' ', children[j].name))
+      util.printf(fmt, ' ', children[j].name)
       listChildNodes(children[j].children, level + 1)
     end
   end
 
   for i=1, #self.nodes do
     if (self.nodes[i].parent == nil) then
-      print(self.nodes[i].name)
+      util.printf("%s\n", self.nodes[i].name)
       listChildNodes(self.nodes[i].children, 1)
     end
   end
@@ -137,4 +140,11 @@ function Space.draw(self, eye_node)
     end
   end
   self.drawCount = self.drawCount + 1
+end
+
+function Space.drawBones(self)
+  if #self.skeletons == 0 then return end
+  for i=1, #self.skeletons do
+    self.skeletons[i]:drawBones()
+  end
 end

@@ -1,22 +1,8 @@
 -- ---------------------------------------------
--- Texture.lua      2013/04/10
---   Copyright (c) 2013 Jun Mizutani,
+-- Texture.lua      2014/01/09
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open sondurce license.
 -- ---------------------------------------------
-
---[[
-Texture:new()
- Texture:setupTexture()
- Texture:setClamp()
- Texture:readImageFromFile(textureFile)
- Texture:writeImageToFile()
- Texture:createTexture(width, height, ncol)
- Texture:fillTexture(r, g, b, a)
- Texture:point(x, y, color)
- Texture:assignTexture()
- Texture:name()
- Texture:active()
-]]
 
 local ffi  = require "ffi"
 local gl   = require "gles2"
@@ -70,18 +56,22 @@ function Texture.readImageFromFile(self, textureFile)
   if image == nil then return false end
   self.filename = textureFile
   png.flipImage(image, w, h, ncol)
+  self:setImage(image, w, h, ncol)
+  return true
+end
+
+function Texture.setImage(self, image, width, height, ncol)
   if ncol == 4 then
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA,
       gl.UNSIGNED_BYTE, image)
   else
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB,
       gl.UNSIGNED_BYTE, image)
   end
   self.image_buffer = image
-  self.width = w
-  self.height = h
+  self.width = width
+  self.height = height
   self.ncol = ncol
-  return true
 end
 
 function Texture.writeImageToFile(self)

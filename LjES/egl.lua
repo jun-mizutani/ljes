@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- egl.lua    2013/03/20
+-- egl.lua    2013/12/21
 --   Copyright (c) 2013 Jun Mizutani, 
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -29,6 +29,7 @@ ffi.cdef[[
   EGLSurface eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
                                   EGLNativeWindowType win,
                                   const EGLint *attrib_list);
+  const char * eglQueryString(EGLDisplay dpy, EGLint name);
 
   EGLContext eglCreateContext(EGLDisplay dpy, EGLConfig config,
                             EGLContext share_context,
@@ -44,6 +45,10 @@ local egl = {
   NO_CONTEXT = ffi.cast("EGLContext", 0),
   NO_DISPLAY = ffi.cast("EGLDisplay", 0),
   NO_SURFACE = ffi.cast("EGLSurface", 0),
+  VENDOR     = 0x3053,
+  VERSION    = 0x3054,
+  EXTENSIONS = 0x3055,
+  CLIENT_APIS = 0x308D,
   ALPHA_SIZE = 0x3021,
   BLUE_SIZE  = 0x3022,
   GREEN_SIZE = 0x3023,
@@ -59,6 +64,7 @@ local egl = {
   initialize = libegl.eglInitialize,
   chooseConfig = libegl.eglChooseConfig,
   createWindowSurface = libegl.eglCreateWindowSurface,
+  queryString = libegl.eglQueryString,
   createContext = libegl.eglCreateContext,
   makeCurrent = libegl.eglMakeCurrent,
   swapBuffers = libegl.eglSwapBuffers

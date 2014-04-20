@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- FrameBufferObject.lua 2013/03/20
+-- FrameBufferObject.lua 2013/04/18
 --   Copyright (c) 2013 Jun Mizutani,
 --   released under the MIT open sondurce license.
 -- ---------------------------------------------
@@ -26,6 +26,7 @@ function FrameBufferObject.create(self, texture_class)
   self.texture = texture_class
   self.width = texture_class.width
   self.height = texture_class.height
+  self.clearColor = {0.0, 0.0, 0.0, 1.0}
   local width = self.texture.width
   local height = self.texture.height
 
@@ -63,12 +64,13 @@ function FrameBufferObject.create(self, texture_class)
 end
 
 function FrameBufferObject.setClearColor(self, r, g, b, alpha)
-    gl.clearColor(r, g, b, alpha)
+  self.clearColor = {r, g, b, alpha}
 end
 
 function FrameBufferObject.clear(self)
   gl.bindFramebuffer(gl.FRAMEBUFFER, self.framebuffer[0])
   gl.viewport(0, 0, self.width, self.height)
+  gl.clearColor(unpack(self.clearColor))
   gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
   --self.texture:active()
 end

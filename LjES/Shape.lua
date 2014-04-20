@@ -1,59 +1,22 @@
 -- ---------------------------------------------
--- Shape.lua        2013/04/11
---   Copyright (c) 2013 Jun Mizutani,
+-- Shape.lua       2014/03/02
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Shape:new()
-  Shape:referShape(shape)
-  Shape:getVertexCount()
-  Shape:getTriangleCount()
-  Shape:shaderParameter(key, value)
-  Shape:ClassShader(shader)
-  Shape:ClassTexture(texture)
-  Shape:setShader(shader)
-  Shape:setTexture(texture)
-  Shape:setTextureMappingMode(mode)
-  Shape:setTextureMappingAxis(axis)
-  Shape:setTextureScale(scale_u, scale_v)
-  Shape:endShape()
-  Shape:draw(modelview, normal)
-  Shape:addVertex(x, y, z)
-  Shape:addVertexUV(x, y, z, u, v)
-  Shape:addVertexPosUV(pos, uv)
-  Shape:setVertNormal(vn, x, y, z)
-  Shape:getVertNormal(vn)
-  Shape:getVertPosition(vn)
-  Shape:checkAltVertex(p)
-  Shape:addTriangle(p0, p1, p2)
-  Shape:addPlane(indices)
-  Shape:calcUV(x, y, z)
-  Shape:revolution(latitude, longitude, verts, spherical)
-  Shape:sphere(radius, latitude, longitude)
-  Shape:donut(radius, radiusTube, latitude, longitude)
-  Shape:cone(height, radius, n)
-  Shape:truncated_cone(height, radiusTop, radiusBottom, n)
-  Shape:double_cone(height, radius, n)
-  Shape:prism(height, radius, n)
-  Shape:arrow(length, head, width, n)
-  Shape:cuboid(size_x, size_y, size_z)
-  Shape:mapCuboid(size_x, size_y, size_z)
-  Shape:cube(size)
-  Shape:mapCube(size)
-  Shape:printVertex()
-]]
-
 local ffi = require "ffi"
 local gl  = require "gles2"
+local util = require "util"
 
 require "Object"
 require "Matrix"
+require "Skeleton"
 
 Shape = Object:new()
 
 function Shape.new(self)
   local obj = Object.new(self)
+  obj.isHidden = false
   obj.tx_mode = 0    -- sphere
   obj.tx_axis = 0
   obj.tx_su =   1.0
@@ -72,7 +35,54 @@ function Shape.new(self)
   obj.ibo = 0
   obj.iObj = nil
   obj.indexCount = 0
+  obj.hasSkeleton = false
+  obj.skeleton = nil
+  obj.bindex = {}
+  obj.weight = {}
+  obj.autoCalcNormals = true
+  obj.box = {
+    minx = 1.0E10, maxx = -1.0E10,
+    miny = 1.0E10, maxy = -1.0E10,
+    minz = 1.0E10, maxz = -1.0E10
+  }
+  obj.anim = nil
   return obj
+end
+
+function Shape.ClassShader(shader)
+  Shape.shader = shader    -- set Shader class instance
+end
+
+function Shape.ClassTexture(texture)
+  Shape.texture = texture  -- set Texture class instance
+end
+
+function Shape.updateBoundingBox(self, x, y, z)
+  local box = self.box
+  if box.minx > x then box.minx = x end
+  if box.maxx < x then box.maxx = x end
+  if box.miny > y then box.miny = y end
+  if box.maxy < y then box.maxy = y end
+  if box.minz > z then box.minz = z end
+  if box.maxz < z then box.maxz = z end
+end
+
+function Shape.getBoundingBox(self)
+  return self.box
+end
+
+function Shape.printBoundingBox(self)
+  local bbox = self.box
+  util.printf(" X: %10.5f -- %10.5f    center:%10.5f, size:%10.5f\n",
+    bbox.minx, bbox.maxx, (bbox.maxx+bbox.minx)/2, bbox.maxx - bbox.minx)
+  util.printf(" Y: %10.5f -- %10.5f    center:%10.5f, size:%10.5f\n",
+    bbox.miny, bbox.maxy, (bbox.maxy+bbox.miny)/2, bbox.maxy - bbox.miny)
+  util.printf(" Z: %10.5f -- %10.5f    center:%10.5f, size:%10.5f\n",
+    bbox.minz, bbox.maxz, (bbox.maxz+bbox.minz)/2, bbox.maxz - bbox.minz)
+end
+
+function Shape.setAutoCalcNormals(self, flag)
+  self.autoCalcNormals = flag
 end
 
 function Shape.referShape(self, shape)
@@ -80,6 +90,18 @@ function Shape.referShape(self, shape)
   self.ibo = shape.ibo
   self.indexCount = shape.indexCount
   self.vertexCount = shape.vertexCount
+end
+
+function Shape.copyShaderParamsFromShape(self, shape)
+  util.copyTable(self.shaderParam, shape.shaderParam)
+end
+
+function Shape.setAnimation(self, anim)
+  self.anim = anim
+end
+
+function Shape.getAnimation(self)
+  return self.anim -- if no animation exists then return nil.
 end
 
 function Shape.getVertexCount(self)
@@ -92,14 +114,6 @@ end
 
 function Shape.shaderParameter(self, key, value)
   self.shaderParam[key] = value
-end
-
-function Shape.ClassShader(shader)
-  Shape.shader = shader    -- set Shader class instance
-end
-
-function Shape.ClassTexture(texture)
-  Shape.texture = texture  -- set Texture class instance
 end
 
 function Shape.setShader(self, shader)
@@ -124,45 +138,115 @@ function Shape.setTextureScale(self, scale_u, scale_v)
 end
 
 function Shape.endShape(self)
-  -- Normalize normal vectors.
-  for i=1, #self.normalArray do
-    x, y, z = unpack(self.normalArray[i])
-    d = math.sqrt(x * x + y * y + z * z)
-    if (d > 0.0) then
-      self.normalArray[i] = {x/d, y/d, z/d}
+  if self.autoCalcNormals then
+    -- Normalize normal vectors.
+    local x, y, z, d
+    for i=1, #self.normalArray do
+      x, y, z = unpack(self.normalArray[i])
+      d = math.sqrt(x * x + y * y + z * z)
+      if (d > 0.0) then
+        self.normalArray[i] = {x/d, y/d, z/d}
+      end
     end
   end
-
   -- Create Vertex Buffer Object.
-  local vObj_len = self.vertexCount * 8
-  self.vObj = ffi.new("float[?]", vObj_len)
-  for i = 1, self.vertexCount do
-    j = (i-1) * 8
-    self.vObj[j  ] = self.positionArray[i][1]
-    self.vObj[j+1] = self.positionArray[i][2]
-    self.vObj[j+2] = self.positionArray[i][3]
-    self.vObj[j+3] = self.normalArray[i][1]
-    self.vObj[j+4] = self.normalArray[i][2]
-    self.vObj[j+5] = self.normalArray[i][3]
-    self.vObj[j+6] = self.texCoordsArray[i][1]
-    self.vObj[j+7] = self.texCoordsArray[i][2]
+  if self.hasSkeleton then
+    local vObj_len = self.vertexCount * 16
+    self.vObj = ffi.new("float[?]", vObj_len)
+    for i = 1, self.vertexCount do
+      local j = (i-1) * 16
+      self.vObj[j   ] = self.positionArray[i][1]
+      self.vObj[j+ 1] = self.positionArray[i][2]
+      self.vObj[j+ 2] = self.positionArray[i][3]
+      self.vObj[j+ 3] = self.normalArray[i][1]
+      self.vObj[j+ 4] = self.normalArray[i][2]
+      self.vObj[j+ 5] = self.normalArray[i][3]
+      self.vObj[j+ 6] = self.texCoordsArray[i][1]
+      self.vObj[j+ 7] = self.texCoordsArray[i][2]
+
+      local boneNumber = self.bindex[i]
+      local weight = self.weight[i]
+      local n = #boneNumber
+      local default = -1
+      for k = 1, n do          -- n <= 4
+        if (default < 0) and (boneNumber[k] < 40) then
+          default = boneNumber[k]
+        end
+        if boneNumber[k] < 40 then
+          self.vObj[j+ 8 + (k-1)] = boneNumber[k]
+          self.vObj[j+12 + (k-1)] = weight[k]
+        else
+          self.vObj[j+ 8 + (k-1)] = default
+          self.vObj[j+12 + (k-1)] = weight[k]
+        end
+      end
+
+      if default < 0 then
+        local bone
+        local bone_num = boneNumber[1]
+        if bone_num == nil then
+          util.printf("vertex[%d] has no weight.\n", i)
+          bone_num = 0
+        else
+          repeat
+            bone = self.skeleton:getBoneFromJointNo(bone_num)
+            if bone.parent == nil then
+              bone_num = 0
+            else
+              bone_num = self.skeleton:getJointFromBone(bone.parent)
+              if bone_num == nil then bone_num = 0 end
+            end
+          until (bone_num < 40)
+        end
+        n = 1
+        self.vObj[j+ 8] = bone_num
+        self.vObj[j+12] = 1.0
+      end
+      if n < 4 then
+        for k = n+1, 4 do
+          self.vObj[j+ 8 + (k-1)] = 0
+          self.vObj[j+12 + (k-1)] = 0.0
+        end
+      end
+
+    end
+    local var = ffi.new("uint32_t[1]")
+    gl.genBuffers(1, var)
+    self.vbo = var[0]
+    gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
+    gl.bufferData(gl.ARRAY_BUFFER, vObj_len * 4, self.vObj, gl.STATIC_DRAW)
+  else
+    local vObj_len = self.vertexCount * 8
+    self.vObj = ffi.new("float[?]", vObj_len)
+    for i = 1, self.vertexCount do
+      local j = (i-1) * 8
+      self.vObj[j  ] = self.positionArray[i][1]
+      self.vObj[j+1] = self.positionArray[i][2]
+      self.vObj[j+2] = self.positionArray[i][3]
+      self.vObj[j+3] = self.normalArray[i][1]
+      self.vObj[j+4] = self.normalArray[i][2]
+      self.vObj[j+5] = self.normalArray[i][3]
+      self.vObj[j+6] = self.texCoordsArray[i][1]
+      self.vObj[j+7] = self.texCoordsArray[i][2]
+    end
+    local var = ffi.new("uint32_t[1]")
+    gl.genBuffers(1, var)
+    self.vbo = var[0]
+    gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
+    gl.bufferData(gl.ARRAY_BUFFER, vObj_len * 4, self.vObj, gl.STATIC_DRAW)
   end
-  local var = ffi.new("uint32_t[1]")
-  gl.genBuffers(1, var)
-  self.vbo = var[0]
-  gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
-  gl.bufferData(gl.ARRAY_BUFFER, vObj_len * 4, self.vObj, gl.STATIC_DRAW)
 
   -- Create Index Buffer Object.
   self.indexCount = #self.indicesArray * 3
   self.iObj = ffi.new("uint16_t[?]", self.indexCount)
+  local j
   for i = 1, #self.indicesArray do
     j = (i-1) * 3
     self.iObj[j  ] = self.indicesArray[i][1]
     self.iObj[j+1] = self.indicesArray[i][2]
     self.iObj[j+2] = self.indicesArray[i][3]
   end
-  -- var = ffi.new("uint32_t[1]")
+  local var = ffi.new("uint32_t[1]")
   gl.genBuffers(1, var)
   self.ibo = var[0]
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ibo)
@@ -171,11 +255,41 @@ function Shape.endShape(self)
   return self.vertexCount
 end
 
+function Shape.releaseObjects(self)
+  self.positionArray  = {}
+  self.normalArray  = {}
+  self.indicesArray   = {}
+  self.texCoordsArray = {}
+  self.altVertices  = {}
+  self.vObj = {}
+  self.iObj = {}
+  self.bindex = {}
+  self.weight = {}
+end
+
+function Shape.setSkeleton(self, skeleton)
+  self.skeleton = skeleton
+  self.hasSkeleton = true
+end
+
+function Shape.getSkeleton(self)
+  return self.skeleton
+end
+
+function Shape.hide(self, true_or_false)
+  self.isHidden = true_or_false
+end
+
 function Shape.draw(self, modelview, normal)
+  if self.isHidden then return end  -- 2013/07/21
+
   local shd = self.shader
   shd:useProgram()
   shd:setModelViewMatrix(modelview)
   shd:setNormalMatrix(normal)
+  if self.hasSkeleton then
+    shd:setMatrixPalette(self.skeleton:updateMatrixPalette())
+  end
   shd:doParameter(self.shaderParam)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo)
@@ -183,38 +297,63 @@ function Shape.draw(self, modelview, normal)
   gl.enableVertexAttribArray(shd.aPosition)
   gl.enableVertexAttribArray(shd.aNormal)
   gl.enableVertexAttribArray(shd.aTexCoord)
-  gl.vertexAttribPointer(shd.aPosition,3,gl.FLOAT,gl.FALSE,4*8,
-    ffi.cast("const void *", 0))
-  gl.vertexAttribPointer(shd.aNormal,  3,gl.FLOAT,gl.FALSE,4*8,
-    ffi.cast("const void *", 3*4))
-  gl.vertexAttribPointer(shd.aTexCoord,2,gl.FLOAT,gl.FALSE,4*8,
-    ffi.cast("const void *", 6*4))
+  if self.hasSkeleton then
+    gl.enableVertexAttribArray(shd.aIndex)
+    gl.enableVertexAttribArray(shd.aWeight)
+    gl.vertexAttribPointer(shd.aPosition, 3, gl.FLOAT, gl.FALSE, 4*16,
+      ffi.cast("const void *", 0))
+    gl.vertexAttribPointer(shd.aNormal,   3, gl.FLOAT, gl.FALSE, 4*16,
+      ffi.cast("const void *", 3*4))
+    gl.vertexAttribPointer(shd.aTexCoord, 2, gl.FLOAT, gl.FALSE, 4*16,
+      ffi.cast("const void *", 6*4))
+    gl.vertexAttribPointer(shd.aIndex,    4, gl.FLOAT, gl.FALSE, 4*16,
+      ffi.cast("const void *", 8*4))
+    gl.vertexAttribPointer(shd.aWeight,   4, gl.FLOAT, gl.FALSE, 4*16,
+      ffi.cast("const void *", 12*4))
+  else
+    if shd.aWeight ~= nil then
+      gl.disableVertexAttribArray(shd.aIndex)
+      gl.disableVertexAttribArray(shd.aWeight)
+    end
+    gl.vertexAttribPointer(shd.aPosition, 3, gl.FLOAT, gl.FALSE, 4*8,
+      ffi.cast("const void *", 0))
+    gl.vertexAttribPointer(shd.aNormal,   3, gl.FLOAT, gl.FALSE, 4*8,
+      ffi.cast("const void *", 3*4))
+    gl.vertexAttribPointer(shd.aTexCoord, 2, gl.FLOAT, gl.FALSE, 4*8,
+      ffi.cast("const void *", 6*4))
+  end
   gl.drawElements(gl.TRIANGLES, self.indexCount, gl.UNSIGNED_SHORT,
     ffi.cast("const void *", 0))
 end
 
-function Shape.addVertex(self, x, y, z)
+function Shape.setVertex(self, x, y, z)
   table.insert(self.positionArray, {x, y, z})
   table.insert(self.normalArray, {0, 0, 0})
-  self:calcUV(x, y, z)
   self.vertexCount = self.vertexCount + 1
+  if self.hasSkeleton then
+    table.insert(self.bindex, {})
+    table.insert(self.weight, {})
+  end
+  self:updateBoundingBox(x, y, z)
   return self.vertexCount
+end
+
+function Shape.addVertex(self, x, y, z)
+  local vcount = self:setVertex(x, y, z)
+  self:calcUV(x, y, z)
+  return vcount
 end
 
 function Shape.addVertexUV(self, x, y, z, u, v)
-  table.insert(self.positionArray, {x, y, z})
-  table.insert(self.normalArray, {0, 0, 0})
+  local vcount = self:setVertex(x, y, z)
   table.insert(self.texCoordsArray, {u, v})
-  self.vertexCount = self.vertexCount + 1
-  return self.vertexCount
+  return vcount
 end
 
 function Shape.addVertexPosUV(self, pos, uv)
-  table.insert(self.positionArray, pos)
-  table.insert(self.normalArray, {0, 0, 0})
+  local vcount = self:setVertex(unpack(pos))
   table.insert(self.texCoordsArray, uv)
-  self.vertexCount = self.vertexCount + 1
-  return self.vertexCount
+  return vcount
 end
 
 function Shape.setVertNormal(self, vn, x, y, z)
@@ -227,6 +366,21 @@ end
 
 function Shape.getVertPosition(self, vn)
   return self.positionArray[vn]
+end
+
+-- vn:vertex_no=1.. ind:bone_index=0.. wt:weight=0.0..1.0
+function Shape.addVertexWeight(self, vn, ind, wt)
+  if not self.hasSkeleton then return end
+  if not self.bindex[vn] then
+     util.printf("#self.bindex = %d\n", #self.bindex)
+     util.printf("addVertexWeight[%d] == nil\n", vn)
+  end
+  if #self.bindex[vn] < 4 then
+    table.insert(self.bindex[vn], ind)
+    table.insert(self.weight[vn], wt)
+  else
+    util.printf("vert[%d] bone[%d] weight: %f\n", vn, ind, wt)
+  end
 end
 
 function Shape.checkAltVertex(self, p)
@@ -245,9 +399,6 @@ function Shape.addTriangle(self, p0, p1, p2)
   local x0, y0, z0 = unpack(self.positionArray[p0])
   local x1, y1, z1 = unpack(self.positionArray[p1])
   local x2, y2, z2 = unpack(self.positionArray[p2])
-  local nx = (y1-y0)*(z2-z1) - (z1-z0)*(y2-y1)
-  local ny = (z1-z0)*(x2-x1) - (x1-x0)*(z2-z1)
-  local nz = (x1-x0)*(y2-y1) - (y1-y0)*(x2-x1)
 
   local u0, v0 = unpack(self.texCoordsArray[p0])
   local u1, v1 = unpack(self.texCoordsArray[p1])
@@ -262,6 +413,10 @@ function Shape.addTriangle(self, p0, p1, p2)
     local np = self:checkAltVertex(p1)
     if (np < 0) then
       p1_new = self:addVertexPosUV(self:getVertPosition(p1), {u1, v1})
+      if self.hasSkeleton then
+        self.bindex[p1_new] = self.bindex[p1]
+        self.weight[p1_new] = self.weight[p1]
+      end
       table.insert(self.altVertices, {p1, p1_new})
     else
       p1_new = np
@@ -273,9 +428,13 @@ function Shape.addTriangle(self, p0, p1, p2)
     else
       u2 = u2 - 1
     end
-    np = self:checkAltVertex(p2)
+    local np = self:checkAltVertex(p2)
     if (np < 0) then
       p2_new = self:addVertexPosUV(self:getVertPosition(p2),{u2,v2})
+      if self.hasSkeleton then
+        self.bindex[p2_new] = self.bindex[p2]
+        self.weight[p2_new] = self.weight[p2]
+      end
       table.insert(self.altVertices, {p2, p2_new})
     else
       p2_new = np
@@ -283,19 +442,24 @@ function Shape.addTriangle(self, p0, p1, p2)
   end
   table.insert(self.indicesArray, {p0-1, p1_new-1, p2_new-1})
 
-  self.normalArray[p0][1] = self.normalArray[p0][1] + nx
-  self.normalArray[p0][2] = self.normalArray[p0][2] + ny
-  self.normalArray[p0][3] = self.normalArray[p0][3] + nz
-  self.normalArray[p1][1] = self.normalArray[p1][1] + nx
-  self.normalArray[p1][2] = self.normalArray[p1][2] + ny
-  self.normalArray[p1][3] = self.normalArray[p1][3] + nz
-  self.normalArray[p2][1] = self.normalArray[p2][1] + nx
-  self.normalArray[p2][2] = self.normalArray[p2][2] + ny
-  self.normalArray[p2][3] = self.normalArray[p2][3] + nz
+  if self.autoCalcNormals then
+    local nx = (y1-y0)*(z2-z1) - (z1-z0)*(y2-y1)
+    local ny = (z1-z0)*(x2-x1) - (x1-x0)*(z2-z1)
+    local nz = (x1-x0)*(y2-y1) - (y1-y0)*(x2-x1)
+    self.normalArray[p0][1] = self.normalArray[p0][1] + nx
+    self.normalArray[p0][2] = self.normalArray[p0][2] + ny
+    self.normalArray[p0][3] = self.normalArray[p0][3] + nz
+    self.normalArray[p1][1] = self.normalArray[p1][1] + nx
+    self.normalArray[p1][2] = self.normalArray[p1][2] + ny
+    self.normalArray[p1][3] = self.normalArray[p1][3] + nz
+    self.normalArray[p2][1] = self.normalArray[p2][1] + nx
+    self.normalArray[p2][2] = self.normalArray[p2][2] + ny
+    self.normalArray[p2][3] = self.normalArray[p2][3] + nz
 
-  for i=1, #self.altVertices do
-    self.normalArray[ self.altVertices[i][2] ] =
-        self.normalArray[ self.altVertices[i][1] ]
+    for i=1, #self.altVertices do
+      self.normalArray[ self.altVertices[i][2] ] =
+          self.normalArray[ self.altVertices[i][1] ]
+    end
   end
 end
 
@@ -371,6 +535,7 @@ function Shape.calcUV(self, x, y, z)
   table.insert(self.texCoordsArray, {u, v})
 end
 
+-- Solid of revolution around y-axis
 function Shape.revolution(self, latitude, longitude, verts, spherical)
   local n = latitude + 1
 
@@ -383,7 +548,7 @@ function Shape.revolution(self, latitude, longitude, verts, spherical)
                0, 1-(i/latitude))
     end
   end
-  T = math.pi * 2 / longitude
+  local T = math.pi * 2 / longitude
   for j = 1, longitude+1 do
     for i = 0, n-1 do
       local k = i * 2 + 1  -- index++
@@ -420,9 +585,9 @@ function Shape.revolution(self, latitude, longitude, verts, spherical)
 end
 
 function Shape.sphere(self, radius, latitude, longitude)
-  vertices = {}
-  pi = math.pi
-  r = radius
+  local vertices = {}
+  local pi = math.pi
+  local r = radius
   table.insert(vertices, r/10000.0)  --  x axis   TOP
   table.insert(vertices, r)          --  y axis
   for i = 1, latitude-1 do
@@ -435,10 +600,10 @@ function Shape.sphere(self, radius, latitude, longitude)
 end
 
 function Shape.donut(self, radius, radiusTube, latitude, longitude)
-  vertices = {}
-  pi = math.pi
-  r = radius
-  r2 = radiusTube
+  local vertices = {}
+  local pi = math.pi
+  local r = radius
+  local r2 = radiusTube
   for i=0, latitude do
     table.insert(vertices, r + r2*math.cos(2*pi*(0.5 - i/latitude)))
     table.insert(vertices, r2*math.sin(2*pi*(0.5 - i/latitude)))
@@ -447,7 +612,7 @@ function Shape.donut(self, radius, radiusTube, latitude, longitude)
 end
 
 function Shape.cone(self, height, radius, n)
-  vertices = {}
+  local vertices = {}
   table.insert(vertices,  0.0001 )     --  x axis   TOP
   table.insert(vertices,  height )     --  y axis
   table.insert(vertices,  radius )     --  x axis
@@ -458,7 +623,7 @@ function Shape.cone(self, height, radius, n)
 end
 
 function Shape.truncated_cone(self, height, radiusTop, radiusBottom, n)
-  vertices = {}
+  local vertices = {}
   table.insert(vertices,  0.0001 )     --  x axis   TOP
   table.insert(vertices,  height )     --  y axis
   table.insert(vertices,  radiusTop )  --  x axis
@@ -471,7 +636,7 @@ function Shape.truncated_cone(self, height, radiusTop, radiusBottom, n)
 end
 
 function Shape.double_cone(self, height, radius, n)
-  vertices = {}
+  local vertices = {}
   table.insert(vertices,  0.0001 )    --  x axis   TOP
   table.insert(vertices,  height )    --  y axis
   table.insert(vertices,  radius )    --  x axis
@@ -482,7 +647,7 @@ function Shape.double_cone(self, height, radius, n)
 end
 
 function Shape.prism(self, height, radius, n)
-  vertices = {}
+  local vertices = {}
   table.insert(vertices,  0.0001 )    --  x axis   TOP
   table.insert(vertices,  height )    --  y axis
   table.insert(vertices,  radius )    --  x axis
@@ -495,7 +660,7 @@ function Shape.prism(self, height, radius, n)
 end
 
 function Shape.arrow(self, length, head, width, n)
-  vertices = {}
+  local vertices = {}
   table.insert(vertices, 0.0001)        --  x axis   TOP
   table.insert(vertices, length)        --  y axis
   table.insert(vertices, width * 3)     --  x axis
@@ -510,9 +675,9 @@ function Shape.arrow(self, length, head, width, n)
 end
 
 function Shape.cuboid(self, size_x, size_y, size_z)
-  sx = size_x / 2.0
-  sy = size_y / 2.0
-  sz = size_z / 2.0
+  local sx = size_x / 2.0
+  local sy = size_y / 2.0
+  local sz = size_z / 2.0
   self:addVertex(-sx,  sy, -sz) --  vertex 0  0 ---- 3 -sz
   self:addVertex(-sx, -sy, -sz) --  vertex 1  |     |
   self:addVertex( sx, -sy, -sz) --  vertex 2  |     |
@@ -552,9 +717,9 @@ function Shape.cuboid(self, size_x, size_y, size_z)
 end
 
 function Shape.mapCuboid(self, size_x, size_y, size_z)
-  sx = size_x / 2.0
-  sy = size_y / 2.0
-  sz = size_z / 2.0
+  local sx = size_x / 2.0
+  local sy = size_y / 2.0
+  local sz = size_z / 2.0
   self:addVertexUV(-sx,  sy, -sz, 0.25, 0.75) --  vtx 0  0 ---- 3 -sz
   self:addVertexUV(-sx, -sy, -sz, 0.25, 1.00) --  vtx 1  | back |
   self:addVertexUV( sx, -sy, -sz, 0.50, 1.00) --  vtx 2  |      |
@@ -601,20 +766,92 @@ function Shape.mapCube(self, size)
   self:mapCuboid(size, size, size)
 end
 
-function Shape.printVertex(self)
-  function p(format, n, value )
-    print(string.format(format, n, unpack(value)))
+function Shape.simpleBone(self, a)
+  self:addVertex( 0, 10*a, 0) -- tail (y)
+  self:addVertex( 0,  a,   a)
+  self:addVertex( 0,  0,   0) -- head (origin)
+  self:addVertex( 0,  a,  -a)
+  self:addVertex( 3*a, a,  0) -- (x)
+  self:addVertex( 0,  2*a,  0)
+  self:addVertex(-a,  a,   0)
+  self:addVertex( 0,  0,   0)
+  self:addVertex( 0, 10*a, 0)
+  self:addVertex( 0,  a,   a)
+  self:addVertex( 0,  0,   0)
+  self:addVertex( 0,  a,  -a)
+  self:addVertex( 3*a, a,  0)
+  self:addVertex( 0,  2*a,  0)
+  self:addVertex(-a,  a,   0)
+  self:addVertex( 0,  0,   0)
+  self:addPlane({  0, 1, 2, 3})
+  self:addPlane({  4, 5, 6, 7})
+  self:addPlane({ 11,10, 9, 8})
+  self:addPlane({ 15,14,13,12})
+  self:endShape()
+end
+
+function Shape.listVertex(self, vn)
+  local size = 8
+  local v = self.vObj
+  if self.hasSkeleton then size = 16 end
+  local j = (vn - 1) * size
+  util.printf("Vertex No. = %d\n", vn)
+  util.printf("  Position x : %f,  y : %f,  z : %f\n", v[j], v[j+1], v[j+2])
+  util.printf("  Normal   x : %f,  y : %f,  z : %f\n", v[j+3], v[j+4], v[j+5])
+  util.printf("  Texture  u : %f,  v : %f\n", v[j+6], v[j+7])
+
+  if self.hasSkeleton then
+     local sum_weights = 0
+     local wcount = 0
+     for i=12, 15 do
+       sum_weights = sum_weights + v[j+i]
+       if v[j+i] > 0.00001 then wcount = wcount + 1 end
+     end
+     util.printf("  [1] index = %f,  weight = %f\n", v[j+ 8], v[j+12])
+     util.printf("  [2] index = %f,  weight = %f\n", v[j+ 9], v[j+13])
+     util.printf("  [3] index = %f,  weight = %f\n", v[j+10], v[j+14])
+     util.printf("  [4] index = %f,  weight = %f\n", v[j+11], v[j+15])
+     if (sum_weights < 0.95) or (sum_weights > 1.05) then
+       util.printf(">>")
+     end
+     util.printf(" [%d] sum of weights(%d)  -->  %f\n",
+                 vn , wcount, sum_weights)
   end
-  function ptab3(title, tab)
-    print(#tab)
-    for i=1, #tab do
-      p(title .. "(%3d) %12e  %12e  %12e  ", i, tab[i])
+end
+
+function Shape.listVertexAll(self)
+  for i = 1, self.vertexCount do
+    self:listVertex(i)
+  end
+  if self.hasSkeleton then
+    self.skeleton:updateMatrixPalette()
+    for i = 1, #self.skeleton.boneOrder do
+      util.printf("  bone : %s\n", self.skeleton.boneOrder[i].name)
+      local n = (i-1) * 12
+      local pal = self.skeleton.matrixPalette
+      local fmt = "% 16.14f % 16.14f % 16.14f % 16.14f\n"
+      for j=0, 2 do
+        local k = n + j * 4
+        util.printf(fmt, pal[k], pal[k+1], pal[k+2], pal[k+3])
+      end
     end
   end
-  function ptab2(title, tab)
-    print(#tab)
+end
+
+function Shape.printVertex(self)
+  local function p(format, n, value )
+    util.printf(format, n, unpack(value))
+  end
+  local function ptab3(title, tab)
+    util.printf("count: %d\n", #tab)
     for i=1, #tab do
-      p(title .. "(%3d) %120e  %120e   ", i, tab[i])
+      p(title .. "(%3d) %12f  %12f  %12f  \n", i, tab[i])
+    end
+  end
+  local function ptab2(title, tab)
+    util.printf("count: %d\n", #tab)
+    for i=1, #tab do
+      p(title .. "(%3d) %12f  %12f   \n", i, tab[i])
     end
   end
 

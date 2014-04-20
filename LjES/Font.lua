@@ -1,19 +1,8 @@
 -- ---------------------------------------------
--- Font.lua        2013/04/09
+-- Font.lua        2013/12/14
 --   Copyright (c) 2013 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
-
---[[
-  Font:new()
-  Font:initShaderParameter()
-  Font:setTextureUnit(tex_unit)
-  Font:setChar(x, y, ch)
-  Font:setPos(x, y)
-  Font:setColor(r, g, b)
-  Font:setScale(scale)
-  Font:getScale()
-]]
 
 local gl  = require("gles2")
 
@@ -76,8 +65,7 @@ Font.fShaderSrc = [[
   void main(void) {
     vec4 tex;
     tex = texture2D(uTexUnit, vec2(vTexCoord.s,vTexCoord.t));
-    gl_FragColor = vec4(uColor, tex.w);
-    //gl_FragColor = tex;
+    gl_FragColor = vec4(tex.xyz * uColor, tex.w);
   }
 ]]
 

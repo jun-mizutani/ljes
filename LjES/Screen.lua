@@ -1,28 +1,8 @@
 -- ---------------------------------------------
--- Screen.lua      2013/04/03
---   Copyright (c) 2013 Jun Mizutani,
+-- Screen.lua       2014/03/01
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
-
---[[
-  Screen:new()
-  Screen:checkOverscan()
-  Screen:checkSize(w, h, x, y)
-  Screen:bcm_init(w, h, x, y)
-  Screen:deinit()
-  Screen:restoreSize()
-  Screen:move(w, h, x, y)
-  Screen:egl_init()
-  Screen:setClearColor(r, g, b, alpha)
-  Screen:cullFace()
-  Screen:init(w, h, x, y)
-  Screen:getFrameCount()
-  Screen:resetFrameCount()
-  Screen:viewport()
-  Screen:clear()
-  Screen:update()
-  Screen:screenShot(filename)
-]]
 
 local ffi = require "ffi"
 local bit = require "bit"
@@ -31,6 +11,7 @@ local gl = require "gles2"
 local bcm = require "bcm"
 local egl = require "egl"
 local png = require "png"
+local util = require "util"
 
 require "Object"
 
@@ -111,8 +92,8 @@ function Screen.fbinfo(self)
   ffi.C.ioctl(fd, FBIOGET_VSCREENINFO, vsinfo)
   self.fsinfo = fsinfo[0]
   self.vsinfo = vsinfo[0]
-  -- print(self.vsinfo.xres)
-  -- print(self.vsinfo.yres)
+  util.printf("x-res:%d\n", self.vsinfo.xres)
+  util.printf("y-res:%d\n", self.vsinfo.yres)
   ffi.C.close(fd)
 end
 
@@ -132,6 +113,9 @@ function Screen.new(self)
   obj.overscan = false
   obj.overscanX = 0
   obj.overscanY = 0
+  obj.clearColor = {0.0, 0.0, 0.0, 1.0}
+  obj.fsinfo = {}
+  obj.vsinfo = {}
   return obj
 end
 
@@ -218,14 +202,14 @@ end
 function Screen.bcm_init(self, w, h, x, y)
   bcm.bcm_host_init()
   self.init = {width = w, height = h, offsetx = x, offsety = y}
-  
+
   local ww = ffi.new("uint32_t[1]")
   local hh = ffi.new("uint32_t[1]")
   local s = bcm.graphics_get_display_size(0, ww, hh)
   self.fullWidth = ww[0]
   self.fullHeight = hh[0]
 
-  self:checkOverscan(self)
+  self:checkOverscan()
   self.width, self.height, self.x, self.y = self:checkSize(w, h, x, y)
 
   local VC_DISPMANX_ALPHA_T = ffi.typeof("VC_DISPMANX_ALPHA_T")
@@ -283,23 +267,17 @@ function Screen.egl_init(self)
   local numConfigs = ffi.new('int[1]')
   local config = ffi.new('void *[1]')
   local display = egl.getDisplay(ffi.cast("EGLDisplay",egl.DEFAULT_DISPLAY))
-
   assert(display, "eglGetDisplay failed.")
 
   local major = ffi.new("uint32_t[1]")
   local minor = ffi.new("uint32_t[1]")
   local res = egl.initialize(display, major, minor)
+  assert(res ~= 0, "eglInitialize failed.")
+  self.majorVersion = major[0]
+  self.minorVersion = minor[0]
 
-  if res == 0 then
-    assert(nil, "eglInitialize failed.")
-  else
-    self.majorVersion = major[0]
-    self.minorVersion = minor[0]
-  end
   res = egl.chooseConfig(display, attrib, config, 1, numConfigs)
-  if res == 0 then
-    assert(nil, "eglChooseConfig failed.")
-  end
+  assert(res ~= 0, "eglChooseConfig failed.")
   local surface = egl.createWindowSurface(display, config[0],
                   self.nativewindow, nil)
 
@@ -309,9 +287,7 @@ function Screen.egl_init(self)
   assert(context, "eglCreateContext failed.")
 
   res = egl.makeCurrent(display, surface, surface, context)
-  if res == 0 then
-    assert(nil, "eglMakeCurrent failed.")
-  end
+  assert(res ~= 0, "eglMakeCurrent failed.")
 
   self.frames = 0
   self.display = display
@@ -320,7 +296,7 @@ function Screen.egl_init(self)
 end
 
 function Screen.setClearColor(self, r, g, b, alpha)
-  gl.clearColor(r, g, b, alpha)
+  self.clearColor = {r, g, b, alpha}
 end
 
 function Screen.cullFace(self)
@@ -352,7 +328,14 @@ end
 function Screen.clear(self)
   gl.bindFramebuffer(gl.FRAMEBUFFER, 0)
   gl.viewport(0, 0, self.width, self.height)
+  gl.clearColor(unpack(self.clearColor))
   gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+end
+
+function Screen.clearDepthBuffer(self)
+  gl.bindFramebuffer(gl.FRAMEBUFFER, 0)
+  gl.viewport(0, 0, self.width, self.height)
+  gl.clear(gl.DEPTH_BUFFER_BIT)
 end
 
 function Screen.update(self)
@@ -366,7 +349,9 @@ function Screen.screenShot(self, filename)
   local buflen = w * h * 3
   local buf = ffi.new("uint8_t[?]", buflen)
   gl.readPixels(0, 0, w, h, gl.RGB, gl.UNSIGNED_BYTE, buf)
-  local filename = "ss" .. os.date("%Y%m%d_%H%M%S") .. ".png"
+  if filename == nil then
+    filename = "ss" .. os.date("%Y%m%d_%H%M%S") .. ".png"
+  end
   png.flipImage(buf, w, h, 3)
   png.writePNG(filename, buf, w, h, 8, 3)
 end

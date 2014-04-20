@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Shader.lua       2013/03/21
+-- Shader.lua       2013/10/27
 --   Copyright (c) 2013 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -39,7 +39,7 @@ function Shader.loadShader(self, type, shaderSource)
     if type == gl.VERTEX_SHADER then
       shaderType = "VERTEX_SHADER"
     end
-    print(string.format("glCreateShader: %s failed.", shaderType))
+    util.printf("glCreateShader: %s failed.\n", shaderType)
     return 0
   end
   local CharP = ffi.typeof("const char*")
@@ -56,7 +56,7 @@ function Shader.loadShader(self, type, shaderSource)
     if (infoLen[0] > 0) then
       local infoLog = ffi.new("char[?]", infoLen[0])
       gl.getShaderInfoLog(shader, infoLen[0], nil, infoLog)
-      print(string.format("Error compiling shader: %s", infoLog))
+      util.printf("Error compiling shader: %s\n", infoLog)
     end
     gl.deleteShader(shader)
     return 0
@@ -72,14 +72,14 @@ function Shader.initShaders(self)
   self.program = prog
   if prog == 0 then
     self.program = 0
-    print("failed to create program.")
-    return False
+    util.printf("Failed to create program.\n")
+    return false
   end
 
   gl.attachShader(prog, vShader)
   gl.attachShader(prog, fShader)
   gl.linkProgram(prog)
-  linked = ffi.new("uint32_t[1]")
+  local linked = ffi.new("uint32_t[1]")
   gl.getProgramiv(prog, gl.LINK_STATUS, linked)
   if linked[0] == 0 then
     local infoLen = ffi.new("uint32_t[1]")
@@ -87,10 +87,11 @@ function Shader.initShaders(self)
     if infoLen[0] > 0 then
       local infoLog = ffi.new("char[?]", infoLen[0])
       gl.getProgramInfoLog(prog, infoLen[0], nil, infoLog)
-      print(string.format("Error linking program: %s", infoLog[0]))
+      util.printf("Error linking program: %s\n", infoLog[0])
+      assert()
     end
     gl.deleteProgram(prog)
-    return False
+    return false
   end
 
   gl.deleteShader(vShader)
@@ -103,7 +104,7 @@ function Shader.setDefaultParam(self, key, value)
 end
 
 function Shader.updateParam(self, param, key, updateFunc)
-  function compare(table1, table2)
+  local function compare(table1, table2)
     if table1 == table2  then return true end  -- identical table
     if #table1 ~= #table2 then return false end
     for i=1, #table1 do
