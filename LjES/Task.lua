@@ -1,5 +1,5 @@
 -- ---------------------------------------------
---  Task.lua       2014/03/16
+--  Task.lua       2014/04/20
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -22,6 +22,7 @@ function Task.new(self, name, no)
   obj.arg = {}
   obj.currentCommand = nil
   obj.targetObject = nil
+  obj.time_scale = 1.0 -- play speed
   return obj
 end
 
@@ -113,7 +114,7 @@ function Task.getNextCommand(self)
   repeat
     self.ip = self.ip + 1
     if (self.ip <= self.stopIP) and (self.ip > 0) then
-      self.time = self.commands[self.ip][1]
+      self.time = self.commands[self.ip][1] * self.time_scale
       self.currentCommand = self.commands[self.ip][2]
       self.arg = self.commands[self.ip][3]
       self.remaining_time = self.time

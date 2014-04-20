@@ -1,5 +1,5 @@
 -- ---------------------------------------------
---  Schedule.lua   2014/03/16
+--  Schedule.lua   2014/04/20
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -148,3 +148,13 @@ function Schedule.directExecution(self, time, command, args, start_ip, stop_ip)
     end
   end
 end
+
+-- time_scale = 1.0:normal, 0.5:fast, 2.0:slow
+function Schedule.setSpeed(self, time_scale)
+  for i = 1, #self.tasks do
+    if self.tasks[i] ~= 0 then
+      self.tasks[i].time_scale = time_scale
+    end
+  end
+end
+
