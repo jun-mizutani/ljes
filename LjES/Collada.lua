@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Collada.lua     2014/02/23
+-- Collada.lua     2014/04/25
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -583,7 +583,7 @@ function Collada.skip(self, tag)
   until t.element == tag.element and t.type == self.CLOSE
 end
 
-function Collada.skipToClosingTab(self, element)
+function Collada.skipToClosingTag(self, element)
   local tag
   local stack = Stack:new()
   stack:push(element)
@@ -606,7 +606,7 @@ end
 -- ----------------------------
 function Collada.asset(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.asset)
+  self:skipToClosingTag(self.ID.asset)
 end
 
 -- ----------------------------
@@ -614,7 +614,7 @@ end
 -- ----------------------------
 function Collada.library_cameras(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.library_cameras)
+  self:skipToClosingTag(self.ID.library_cameras)
 end
 
 -- ----------------------------
@@ -622,7 +622,7 @@ end
 -- ----------------------------
 function Collada.library_lights(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.library_lights)
+  self:skipToClosingTag(self.ID.library_lights)
 end
 
 -- ----------------------------
@@ -630,7 +630,7 @@ end
 -- ----------------------------
 function Collada.library_images(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.library_images)
+  self:skipToClosingTag(self.ID.library_images)
 end
 
 -- ----------------------------
@@ -638,7 +638,7 @@ end
 -- ----------------------------
 function Collada.library_effects(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.library_effects)
+  self:skipToClosingTag(self.ID.library_effects)
 end
 
 -- ----------------------------
@@ -646,7 +646,7 @@ end
 -- ----------------------------
 function Collada.library_materials(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.library_materials)
+  self:skipToClosingTag(self.ID.library_materials)
 end
 
 -- ----------------------------
@@ -875,9 +875,9 @@ function Collada.geo_mesh(self, id)
            input_count, vcount_sum, #polygons)
 
     elseif t.element == self.ID.lines then
-      self:skipToClosingTab(self.ID.lines)
+      self:skipToClosingTag(self.ID.lines)
     elseif t.element == self.ID.linestrips then
-      self:skipToClosingTab(self.ID.linestrips)
+      self:skipToClosingTag(self.ID.linestrips)
     else
       if t.type ~= self.CLOSE then
         util.printf("Error : <%s>\n", t.elementName)
@@ -1092,7 +1092,7 @@ function Collada.node(self, tag, parent_frame)
           self:getList(self.ID.skeleton)
         elseif t.element == self.ID.bind_material and t.type == self.OPEN then
           -- skip
-          self:skipToClosingTab(self.ID.bind_material)
+          self:skipToClosingTag(self.ID.bind_material)
         end
       until t.element == self.ID.instance_controller and t.type == self.CLOSE
     end
@@ -1171,16 +1171,16 @@ function Collada.animation(self, tag, parent)
           kind, axis = self:checkAnimationType(t.args.id)
           output = self:source()
         else -- other sources are ignored.
-          self:skipToClosingTab(self.ID.source)
+          self:skipToClosingTag(self.ID.source)
         end
       end
     elseif t.element == self.ID.sampler and t.type == self.OPEN then
       if t.type ~= self.EMPTY then
-        self:skipToClosingTab(self.ID.sampler)
+        self:skipToClosingTag(self.ID.sampler)
       end
     elseif t.element == self.ID.channel then
       if t.type ~= self.EMPTY then
-        self:skipToClosingTab(self.ID.channel)
+        self:skipToClosingTag(self.ID.channel)
       end
     elseif t.element == self.ID.asset and t.type == self.OPEN then
       self:asset(t)
@@ -1214,7 +1214,7 @@ function Collada.library_animations(self, tag)
         scale = string.match(t.args.id, "_scale")
       end
       if (loc ~= nil) or (rot ~= nil) or (scale ~= nil) then
-        self:skipToClosingTab(self.ID.animation)
+        self:skipToClosingTag(self.ID.animation)
       else
         local bone_poses = {}
         times, output, kind, axis, bone_name = self:animation(t, nil)
@@ -1251,7 +1251,7 @@ end
 -- ----------------------------
 function Collada.scene(self, tag)
   if tag.type == self.EMPTY then return end
-  self:skipToClosingTab(self.ID.scene)
+  self:skipToClosingTag(self.ID.scene)
 end
 
 function Collada.getAnimation(self)
