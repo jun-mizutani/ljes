@@ -1,12 +1,12 @@
 -- ---------------------------------------------
---  Mesh.lua       2014/03/23
+--  Mesh.lua       2014/06/05
 --   for collada.lua
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 require("Object")
-util = require("util")
+local util = require("util")
 
 Mesh = Object:new()
 

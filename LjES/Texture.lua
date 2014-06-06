@@ -1,13 +1,13 @@
 -- ---------------------------------------------
--- Texture.lua      2014/01/09
+-- Texture.lua      2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open sondurce license.
 -- ---------------------------------------------
 
-local ffi  = require "ffi"
-local gl   = require "gles2"
-local png  = require "png"
-local util = require "util"
+local ffi  = require("ffi")
+local gl   = require("gles2")
+local png  = require("png")
+local util = require("util")
 
 require("Object")
 

@@ -1,25 +1,13 @@
 -- ---------------------------------------------
--- Shader.lua       2013/10/27
---   Copyright (c) 2013 Jun Mizutani,
+-- Shader.lua       2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Shader:new()
-  Shader:loadShader(type, shaderSource)
-  Shader:initShaders()
-  Shader:setDefaultParam(key, value)
-  Shader:updateParam(param, key, updateFunc)
-  Shader:initShaderParameter()
-  Shader:doParameter(param)
-  Shader:useProgram()
-  Shader:init()
-]]
+local ffi = require("ffi")
+local gl = require("gles2")
 
-local ffi = require "ffi"
-local gl = require "gles2"
-
-require "Object"
+require("Object")
 
 Shader = Object:new()
 

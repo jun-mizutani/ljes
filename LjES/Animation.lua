@@ -1,12 +1,12 @@
 -- ---------------------------------------------
---  Animation.lua      2014/03/16
+--  Animation.lua      2014/06/05
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 require("Schedule")
 require("Node")
-util = require("util")
+local util = require("util")
 
 Animation = Object:new()
 

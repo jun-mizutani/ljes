@@ -1,17 +1,11 @@
 -- ---------------------------------------------
--- png.lua          2013/03/25
---   Copyright (c) 2013 Jun Mizutani,
+-- png.lua          2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  png.readPNG(filename, fill)
-  png.writePNG(filename, image, bytes, width, height, bpp, coltype)
-  png.flipImage(image, width, height, ncol)
-]]
-
-local ffi = require "ffi"
-libpng = ffi.load("libpng12.so.0")
+local ffi = require("ffi")
+local libpng = ffi.load("libpng12.so.0")
 
 ffi.cdef[[
 typedef struct _IO_FILE FILE;

@@ -1,10 +1,10 @@
 -- ---------------------------------------------
--- util.lua        2014/02/07
+-- util.lua        2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
+local ffi = require("ffi")
 
 ffi.cdef[[
   typedef struct timeval {

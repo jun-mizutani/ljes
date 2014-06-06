@@ -1,31 +1,12 @@
 -- ---------------------------------------------
--- Phong.lua       2013/04/09
---   Copyright (c) 2013 Jun Mizutani,
+-- Phong.lua       2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
---[[
-  Phong:new()
-  Phong:initShaderParameter()
-  Phong:init()
-  Phong:setLightPosition(positionAndType)
-  Phong:useTexture(flag)
-  Phong:setTextureUnit(tex_unit)
-  Phong:setEmissive(flag)
-  Phong:setAmbientLight(intensity)
-  Phong:setSpecular(intensity)
-  Phong:setSpecularPower(power)
-  Phong:setColor(color)
-  Phong:setProjectionMatrix(m)
-  Phong:setModelViewMatrix(m)
-  Phong:setNormalMatrix(m)
-  Phong:updateTexture(param)
-  Phong:doParameter(param)
-]]
-
-local ffi = require "ffi"
-local gl = require "gles2"
-require "Shader"
+local ffi = require("ffi")
+local gl = require("gles2")
+require("Shader")
 
 Phong = Shader:new()
 

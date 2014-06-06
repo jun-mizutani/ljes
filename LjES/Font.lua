@@ -1,12 +1,12 @@
 -- ---------------------------------------------
--- Font.lua        2013/12/14
---   Copyright (c) 2013 Jun Mizutani,
+-- Font.lua        2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 local gl  = require("gles2")
 
-require "Shader"
+require("Shader")
 
 Font = Shader:new()
 

@@ -1,23 +1,13 @@
 -- ---------------------------------------------
--- FrameBufferObject.lua 2013/04/18
---   Copyright (c) 2013 Jun Mizutani,
+-- FrameBufferObject.lua 2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open sondurce license.
 -- ---------------------------------------------
-
---[[
-  FrameBufferObject:create(texture_class)
-  FrameBufferObject:setClearColor(r, g, b, alpha)
-  FrameBufferObject:clear()
-  FrameBufferObject:endDraw()
-  FrameBufferObject:destroy()
-  FrameBufferObject:writeToFile()
-]]
 
 local ffi = require("ffi")
 local gl  = require("gles2")
 local png  = require("png")
 
-require("Object")
 require("Texture")
 
 FrameBufferObject = Object:new()

@@ -1,11 +1,12 @@
 -- ---------------------------------------------
--- Message.lua     2014/03/30
+-- Message.lua     2014/06/06
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local gl   = require "gles2"
-require "Text"
+local ffi = require("ffi")
+local gl = require("gles2")
+require("Text")
 
 Message = Text:new()
 

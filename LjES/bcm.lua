@@ -1,11 +1,11 @@
 -- ---------------------------------------------
--- bcm.lua          2013/03/20
---   Copyright (c) 2013 Jun Mizutani,
+-- bcm.lua          2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
-local bcm_host = ffi.load("bcm_host");
+local ffi = require("ffi")
+local bcm_host = ffi.load("bcm_host")
 
 ffi.cdef[[
 

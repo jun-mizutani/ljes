@@ -1,14 +1,15 @@
 -- ---------------------------------------------
--- Text.lua        2014/02/11
+-- Text.lua        2014/06/06
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 local bit = require("bit")
-local gl  = require "gles2"
+local gl  = require("gles2")
+local ffi = require("ffi")
 
-require "Font"
-require "Texture"
+require("Font")
+require("Texture")
 
 local shl = bit.lshift
 local band = bit.band

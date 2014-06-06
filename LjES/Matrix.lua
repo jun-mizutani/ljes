@@ -1,12 +1,12 @@
 -- ---------------------------------------------
--- Matrix.lua       2014/03/02
+-- Matrix.lua       2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 local ffi  = require ("ffi")
 local util = require ("util")
-require "Object"
+require("Object")
 
 local function RAD(degree)
   return degree * math.pi / 180.0

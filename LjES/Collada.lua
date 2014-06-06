@@ -1,12 +1,11 @@
 -- ---------------------------------------------
--- Collada.lua     2014/04/25
+-- Collada.lua     2014/06/05
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 package.path = "../LjES/?.lua;" .. package.path
 
-require "Object"
-util = require("util")
+local util = require("util")
 require("Stack")
 require("Mesh")
 require("Frame")

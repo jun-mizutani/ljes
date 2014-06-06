@@ -1,16 +1,14 @@
 -- ---------------------------------------------
--- Shape.lua       2014/03/02
+-- Shape.lua       2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
-local gl  = require "gles2"
-local util = require "util"
+local ffi = require("ffi")
+local gl  = require("gles2")
+local util = require("util")
 
-require "Object"
-require "Matrix"
-require "Skeleton"
+require("Skeleton")
 
 Shape = Object:new()
 

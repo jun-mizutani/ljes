@@ -1,13 +1,12 @@
 -- ---------------------------------------------
---  CoordinateSystem.lua  2014/03/06
+--  CoordinateSystem.lua  2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-require "Object"
-require "Matrix"
-require "Quat"
-local util = require "util"
+require("Matrix")
+require("Quat")
+local util = require("util")
 
 CoordinateSystem = Object:new()
 CoordinateSystem.COORD_T = 0

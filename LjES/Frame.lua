@@ -1,12 +1,12 @@
 -- ---------------------------------------------
---  Frame.lua      2014/03/16
+--  Frame.lua      2014/06/05
 --  treat <node> elements of COLLADA format
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 require("CoordinateSystem")
-util = require("util")
+local util = require("util")
 
 Frame = CoordinateSystem:new(nil)
 

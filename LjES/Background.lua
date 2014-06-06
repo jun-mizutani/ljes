@@ -1,28 +1,14 @@
 -- ---------------------------------------------
--- Background.lua   2013/03/20
---   Copyright (c) 2013 Jun Mizutani,
+-- Background.lua   2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
-
---[[
-  Background:new()
-  Background:initShaderParameter()
-  Background:setTextureUnit(tex_unit)
-  Background:setColor(r, g, b)
-  Background:setAspect(aspect)
-  Background:setWindow(left, top, width, height)
-  Background:setOrder(order)
-  Background:init()
-  Background:setBackground(texture)
-  Background:makeShape (scale)
-  Background:drawScreen()
-]]
 
 local ffi = require("ffi")
 local gl  = require("gles2")
 
-require "Shader"
-require "Texture"
+require("Shader")
+require("Texture")
 
 Background = Shader:new()
 

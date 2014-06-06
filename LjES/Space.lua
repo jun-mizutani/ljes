@@ -1,13 +1,11 @@
 -- ---------------------------------------------
---  Space.lua      2014/02/16
+--  Space.lua      2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local util = require "util"
-require "Object"
-require "Matrix"
-require "Node"
+local util = require("util")
+require("Node")
 
 Space = Object:new()
 

@@ -1,12 +1,12 @@
 -- ---------------------------------------------
--- BonePhong.lua    2013/10/26
---   Copyright (c) 2013 Jun Mizutani,
+-- BonePhong.lua    2014/06/05
+--   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
-local gl = require "gles2"
-require "Shader"
+local ffi = require("ffi")
+local gl = require("gles2")
+require("Shader")
 
 BonePhong = Shader:new()
 

@@ -1,13 +1,13 @@
 -- ---------------------------------------------
--- Quat.lua        2014/03/05
+-- Quat.lua        2014/06/05
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-ffi  = require "ffi"
-util = require "util"
+local ffi  = require("ffi")
+local util = require("util")
 
-require "Object"
+require("Object")
 
 local function RAD(degree)
   return degree * math.pi / 180.0

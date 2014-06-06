@@ -1,11 +1,11 @@
 -- ---------------------------------------------
---  Skeleton.lua       2014/03/01
+--  Skeleton.lua       2014/06/06
 --   Copyright (c) 2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-require "Matrix"
-require "Node"
+local ffi = require("ffi")
+require("Node")
 
 Skeleton = Object:new()
 
