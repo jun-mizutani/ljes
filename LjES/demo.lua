@@ -1,10 +1,10 @@
 -- ---------------------------------------------
--- demo.lua    2014/03/30
+-- demo.lua    2014/06/06
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local util = require("util")
+util = require("util")
 local termios = require("termios")
 
 require("BonePhong")
