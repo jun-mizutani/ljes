@@ -1,19 +1,19 @@
 -- ---------------------------------------------
--- Screen.lua       2014/03/01
+-- Screen.lua       2014/06/05
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
-local ffi = require "ffi"
-local bit = require "bit"
+local ffi = require("ffi")
+local bit = require("bit")
 
-local gl = require "gles2"
-local bcm = require "bcm"
-local egl = require "egl"
-local png = require "png"
-local util = require "util"
+local gl = require("gles2")
+local bcm = require("bcm")
+local egl = require("egl")
+local png = require("png")
+local util = require("util")
 
-require "Object"
+require("Object")
 
 Screen = Object:new()
 
@@ -315,6 +315,18 @@ end
 
 function Screen.getFrameCount(self)
   return self.frames
+end
+
+function Screen.getAspect(self)
+  return self.width / self.height
+end
+
+function Screen.getWidth(self)
+  return self.width
+end
+
+function Screen.getHeight(self)
+  return self.height
 end
 
 function Screen.resetFrameCount(self)
