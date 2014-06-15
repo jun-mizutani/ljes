@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Background.lua   2014/06/05
+-- Background.lua   2014/06/15
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -49,12 +49,12 @@ Background.vShaderSrc = [[
   uniform   vec4  uWindow; // left, top, width, height
   void main() {
      vec3 pos;
-     pos.x = aPosition.x * uWindow.z + uWindow.x - 1.0;
-     pos.y = aPosition.y * uWindow.w + uWindow.y - 1.0;
+     pos.x = aPosition.x * uWindow.z + uWindow.x;
+     pos.y = aPosition.y * uWindow.w + uWindow.y;
      pos.z = aPosition.z - 0.00001*uOrder;
      gl_Position = vec4(pos.xyz, 1.0);
-     vTexCoord.s = aTexCoord.s;
-     vTexCoord.t = aTexCoord.t * uAspect;
+     vTexCoord.s = aTexCoord.s * uAspect;
+     vTexCoord.t = aTexCoord.t;
   }
 ]]
 
@@ -112,10 +112,10 @@ end
 function Background.makeShape (self, scale)
   local vObj = ffi.new("float[?]", 20,  --         (2)        (3)
      -- position XYZ,   texcoord UV : 5 floats   1.0 +---------+
-      0.0,  0.0,  0.999999, 0.0, 0.0,   -- (0)       |         |
-      2.0,  0.0,  0.999999, 1.0, 0.0,   -- (1)    Y  |         |
-      0.0,  2.0,  0.999999, 0.0, 1.0,   -- (2)   0.0 +---------+
-      2.0,  2.0,  0.999999, 1.0, 1.0    -- (3)       0.0 -X-> 1.0
+     -1.0, -1.0,  0.999999, 0.0, 0.0,   -- (0)       |         |
+      1.0, -1.0,  0.999999, 1.0, 0.0,   -- (1)    Y  |         |
+     -1.0,  1.0,  0.999999, 0.0, 1.0,   -- (2)   0.0 +---------+
+      1.0,  1.0,  0.999999, 1.0, 1.0    -- (3)       0.0 -X-> 1.0
      )                                  --         (0)        (1)
 
   local vbo = ffi.new("uint32_t[1]")
