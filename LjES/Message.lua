@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Message.lua     2014/06/06
+-- Message.lua     2014/07/24
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -73,6 +73,7 @@ function Message.drawScreen(self)
     y = v[2]
     str = v[3]
     color = v[4]
+    shd:useProgram()
     if ((x >= 0) and (x < 80)) and ((y >= 0) and (y < 25)) then
       for j=1, #str do
         c = string.byte(str, j)

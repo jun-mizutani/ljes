@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Text.lua        2014/06/06
+-- Text.lua        2014/07/24
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -169,7 +169,7 @@ end
 
 function Text.write(self, str)
   for i=1, string.len(str) do
-    self.screen[self.cursorY * 80 + self.cursorX] = string.byte(str, i) 
+    self.screen[self.cursorY * 80 + self.cursorX] = string.byte(str, i)
                                                      - self.charOffset
     self:incCursorPosition()
   end
@@ -308,9 +308,11 @@ function Text.drawScreen(self)
   if scale < 1.0 then scale = 1.0 end
   local maxRow = math.floor(25 / scale) - 1
   local maxColumn = math.floor(80 / scale) - 1
+  shd:useProgram()
   for i=0, maxRow do
+    local k = i * 80
     for j=0, maxColumn do
-      c = self.screen[i * 80 + j]
+      c = self.screen[k + j]
       if (c ~= 0) then
         shd:setChar(j, i, c)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)

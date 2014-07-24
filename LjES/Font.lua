@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Font.lua        2014/06/05
+-- Font.lua        2014/07/24
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -76,7 +76,7 @@ end
 
 -- ($20<= ch <=$7F)
 function Font.setChar(self, x, y, ch)
-  self:useProgram()
+  -- self:useProgram()
   gl.uniform3f(self.uChar, x, y, ch)
 end
 
