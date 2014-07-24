@@ -1,5 +1,5 @@
 -- ---------------------------------------------
---  Space.lua      2014/06/05
+--  Space.lua      2014/07/20
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -129,7 +129,7 @@ function Space.draw(self, eye_node)
   end
   eye_node:setWorldMatrix()
   local view_matrix = Matrix:new()
-  view_matrix:makeView(eye_node.matrix)
+  view_matrix:makeView(eye_node.worldMatrix)
 
   for i=1, #self.nodes do
     node = self.nodes[i]
