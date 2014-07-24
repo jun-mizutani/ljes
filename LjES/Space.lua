@@ -1,5 +1,5 @@
 -- ---------------------------------------------
---  Space.lua      2014/07/20
+--  Space.lua      2014/07/23
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -15,6 +15,7 @@ function Space.new(self)
   obj.roots = {}
   obj.skeletons = {}
   obj.light = nil
+  obj.lightType = 1.0
   local sec, usec = util.gettimeofday()
   obj.startTime = sec + usec/1000000
   obj.time = 0
@@ -48,7 +49,7 @@ function Space.scanSkeletons(self)
   self.skeletons = {}
   for i=1, #self.nodes do
     shapes = self.nodes[i].shapes
-    if #shapes > 0 then 
+    if #shapes > 0 then
       for j=1, #shapes do
         local skeleton = shapes[j].skeleton
         if skeleton ~= nil then
@@ -114,6 +115,16 @@ function Space.setLight(self, node)
   self.light = node
 end
 
+function Space.setLightType(self, type)
+  -- type = 0:spot, 1:parallel
+  self.lightType = type
+end
+
+function Space.getLightType(self)
+  -- type = 0:spot, 1:parallel
+  return self.lightType
+end
+
 function Space.setEye(self, node)
   self.eye = node
 end
@@ -131,10 +142,23 @@ function Space.draw(self, eye_node)
   local view_matrix = Matrix:new()
   view_matrix:makeView(eye_node.worldMatrix)
 
+  local lightVec
+  if self.light ~= nil then
+    if self.lightType == 1.0 then  -- point light
+      lightVec = view_matrix:mul3x3Vector(self.light:getWorldPosition())
+    else                           -- parallel light
+      local lightInEye = view_matrix:clone()
+      lightInEye:mul(self.light.worldMatrix)
+      lightVec = lightInEye:mul3x3Vector( {0.0, 0.0, 1.0} )
+    end
+
+    table.insert(lightVec, self.lightType)
+  end
+
   for i=1, #self.nodes do
     node = self.nodes[i]
     if (node.parent == nil) then
-      node:draw(view_matrix)
+      node:draw(view_matrix, lightVec)
     end
   end
   self.drawCount = self.drawCount + 1

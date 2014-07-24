@@ -1,5 +1,5 @@
 -- ---------------------------------------------
---  Node.lua        2014/03/10
+--  Node.lua        2014/07/21
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -187,7 +187,7 @@ function Node.getShapeCount(self)
   return #self.shapes
 end
 
-function Node.draw(self, view_matrix)
+function Node.draw(self, view_matrix, light_vec)
   if (self.type == self.BONE_T) and not self.attachable then
     return
   end
@@ -203,13 +203,16 @@ function Node.draw(self, view_matrix)
   if self.type == self.NODE_T then
     local shapes = self.shapes
     for i=1, #shapes do
+      if light_vec ~= nil then
+	 shapes[i]:shaderParameter("light", light_vec)
+      end
       shapes[i]:draw(modelview, normal)
     end
   end
 
   local children = self.children
   for j=1, #children do
-    children[j]:draw(modelview)
+    children[j]:draw(modelview, light_vec)
   end
 end
 
