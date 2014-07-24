@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Matrix.lua       2014/06/05
+-- Matrix.lua       2014/07/22
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -144,9 +144,9 @@ function Matrix.setByEulerXYZ(self, rx, ry, rz)
 end
 
 function Matrix.matToEulerXYZ(self)
-  local rx = DEG(-math.atan(self.mat[6] / self.mat[10]))
+  local rx = DEG(-math.atan2(self.mat[6], self.mat[10]))
   local ry = DEG( math.asin(self.mat[2]))
-  local rz = DEG(-math.atan(self.mat[1] / self.mat[0]))
+  local rz = DEG(-math.atan2(self.mat[1], self.mat[0]))
   return rx, ry, rz
 end
 
@@ -179,9 +179,9 @@ function Matrix.setByEuler(self, head, pitch, bank)
 end
 
 function Matrix.matToEuler(self)
-  local rz = DEG(-math.atan(self.mat[4] / self.mat[5]))  --  bank
+  local rz = DEG(-math.atan2(self.mat[4], self.mat[5]))  --  bank
   local rx = DEG(math.asin(self.mat[6]))                 --  pitch
-  local ry = DEG(-math.atan(self.mat[2] / self.mat[10])) --  head
+  local ry = DEG(-math.atan2(self.mat[2], self.mat[10])) --  head
   return ry, rx, rz             --  [head, pitch, bank]
 end
 
