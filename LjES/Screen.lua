@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- Screen.lua       2014/06/05
+-- Screen.lua       2014/10/13
 --   Copyright (c) 2013-2014 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -353,6 +353,14 @@ end
 function Screen.update(self)
   self.frames = self.frames + 1
   egl.swapBuffers(self.display, self.surface)
+end
+
+function Screen.swapInterval(self, interval)
+  if interval >=0 and interval <= 10 then
+    -- If interval ~= 0 then framerate = 60 / interval.
+    -- If interval == 0 then no vsync.
+    egl.swapInterval(self.display, interval)
+  end
 end
 
 function Screen.screenShot(self, filename)

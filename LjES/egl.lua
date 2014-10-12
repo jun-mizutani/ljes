@@ -1,5 +1,5 @@
 -- ---------------------------------------------
--- egl.lua    2014/06/05
+-- egl.lua    2014/10/13
 --   Copyright (c) 2013-2014 Jun Mizutani, 
 --   released under the MIT open source license.
 -- ---------------------------------------------
@@ -39,6 +39,8 @@ ffi.cdef[[
                           EGLSurface read, EGLContext ctx);
 
   EGLBoolean eglSwapBuffers(EGLDisplay dpy, EGLSurface surface);
+
+  EGLBoolean eglSwapInterval(EGLDisplay dpy, EGLint interval);
 ]]
 
 local egl = {
@@ -67,7 +69,8 @@ local egl = {
   queryString = libegl.eglQueryString,
   createContext = libegl.eglCreateContext,
   makeCurrent = libegl.eglMakeCurrent,
-  swapBuffers = libegl.eglSwapBuffers
+  swapBuffers = libegl.eglSwapBuffers,
+  swapInterval = libegl.eglSwapInterval
 }
 
 return egl
