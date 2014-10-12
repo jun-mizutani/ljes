@@ -20,6 +20,7 @@
  Screen:clear()
  Screen:clearDepthBuffer()
  Screen:update()
+ Screen:swapInterval(interval)
  Screen:screenShot(filename)
  Space:new()
  Space:addNode(parent_node, name)
