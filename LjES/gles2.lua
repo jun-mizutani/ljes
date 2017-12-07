@@ -1,12 +1,12 @@
 -- ---------------------------------------------
--- gles2.lua        2013/10/27
---   Copyright (c) 2013 Jun Mizutani,
+-- gles2.lua        2017/12/07
+--   Copyright (c) 2013-2017 Jun Mizutani,
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 local ffi = require("ffi")
 local util = require("util")
-libgles2  = ffi.load("GLESv2")
+libgles2  = ffi.load("brcmGLESv2")
 
 ffi.cdef[[
 

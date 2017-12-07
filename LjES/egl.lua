@@ -1,11 +1,11 @@
 -- ---------------------------------------------
--- egl.lua    2014/10/13
---   Copyright (c) 2013-2014 Jun Mizutani, 
+-- egl.lua    2017/12/07
+--   Copyright (c) 2013-2017 Jun Mizutani, 
 --   released under the MIT open source license.
 -- ---------------------------------------------
 
 local ffi = require("ffi")
-local libegl = ffi.load("EGL")
+local libegl = ffi.load("brcmEGL")
 
 ffi.cdef[[
   typedef int EGLint;
