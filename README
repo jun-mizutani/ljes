@@ -1,7 +1,7 @@
 LjES : 3D framework for LuaJIT on Raspberry Pi
 
-2014/03/30  Jun Mizutani <mizutani.jun@nifty.ne.jp>
-                         http://www.mztn.org/rpi/rpi_ljes2.html
+2017/12/07  Jun Mizutani <mizutani.jun@nifty.ne.jp>
+                         https://www.mztn.org/rpi/rpi_ljes2.html
 
 LjES is a small 3D framework for Raspberry Pi built on top of the
 OpenGL ES 2.0. LjES is written by 100% LuaJIT. The goal of this
@@ -14,8 +14,8 @@ any packages on Raspberry Pi to use LjES.
  o  BonePhong shader supports up to 40 bones per mesh.
 
 Usage :
-  tar zxf ljes-2.00.tar.gz
-  cd ljes-2.00
+  tar zxf ljes-2.01.tar.gz
+  cd ljes-2.01
   cd examples
   luajit demo_spheres.lua
   luajit hand.lua
